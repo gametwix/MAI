@@ -1,0 +1,272 @@
+#!/bin/bash
+DIR=$(pwd)
+MASK="*q"
+BYT=1024
+
+case "$1" in
+  "?" )
+  echo "Version 1.0"
+  echo "-d [/path/to/directory]"
+  echo "-p [prephix]"
+  echo "-b [disk usage at byte]"
+  echo "-k [disk usage at kilobyte]"
+  echo "-m [disk usage at megabyte]"
+  echo "-g [disk usage at gigabyte]"
+  echo "-t [disk usage at terabyte]"
+  exit 0
+  ;;
+
+  "-d" )
+  if [ -n "$2" ]
+  then
+    DIR="$2"
+  else
+    echo "Enter directory"
+    exit 0
+  fi
+  ;;
+
+
+  "-p" )
+  if [ -n "$2" ]
+  then
+    MASK="$2"
+  else
+    echo "Enter prephix"
+    exit 0
+  fi
+  ;;
+
+  "-b" )
+  if [ -n "$2" ]
+  then
+    BYT=$2
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-k" )
+  if [ -n "$2" ]
+  then
+    BYT=$(( $2 * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-m" )
+  if [ -n "$2" ]
+  then
+    BYT=$(( $2 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-g" )
+  if [ -n "$2" ]
+  then
+    BYT=$(( $2 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-t" )
+  if [ -n "$2" ]
+  then
+    BYT=$(( $2 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+
+esac
+
+case "$3" in
+
+  "-d" )
+  if [ -n "$4" ]
+  then
+    DIR="$4"
+  else
+    echo "Enter directory"
+    exit 0
+  fi
+  ;;
+
+
+  "-p" )
+  if [ -n "$4" ]
+  then
+    MASK="$4"
+  else
+    echo "Enter prephix"
+    exit 0
+  fi
+  ;;
+
+  "-b" )
+  if [ -n "$4" ]
+  then
+    BYT=$4
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-k" )
+  if [ -n "$4" ]
+  then
+    BYT=$(( $4 * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-m" )
+  if [ -n "$4" ]
+  then
+    BYT=$(( $4 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-g" )
+  if [ -n "$4" ]
+  then
+    BYT=$(( $4 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-t" )
+  if [ -n "$4" ]
+  then
+    BYT=$(( $4 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+
+esac
+
+case "$5" in
+
+  "-d" )
+  if [ -n "$6" ]
+  then
+    DIR="$6"
+  else
+    echo "Enter directory"
+    exit 0
+  fi
+  ;;
+
+
+  "-p" )
+  if [ -n "$6" ]
+  then
+    MASK="$6"
+  else
+    echo "Enter prephix"
+    exit 0
+  fi
+  ;;
+
+  "-b" )
+  if [ -n "$6" ]
+  then
+    BYT=$6
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-k" )
+  if [ -n "$6" ]
+  then
+    BYT=$(( $6 * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-m" )
+  if [ -n "$6" ]
+  then
+    BYT=$(( $6 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-g" )
+  if [ -n "$6" ]
+  then
+    BYT=$(( $6 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+  "-t" )
+  if [ -n "$6" ]
+  then
+    BYT=$(( $6 * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+    BYT=$(( $BYT * 1024 ))
+  else
+    echo "Enter directory size"
+    exit 0
+  fi
+  ;;
+
+
+esac
+
+LARG=$(sudo find "$DIR" -type f -name "$MASK" -exec ls -s {} \; | sort -n -r| head -1 | grep -E -o "/[.1-9a-zA-Z/]*")
+
+while [ $(du -sb "$DIR"| grep -E -o "[0-9]*") -gt $BYT ] && [ -n "$LARG" ]
+do
+
+sudo rm "$LARG"
+
+LARG=$(sudo find "$DIR" -type f -name "$MASK" -exec ls -s {} \; | sort -n -r| head -1 | grep -E -o "/[.1-9a-zA-Z/]*")
+
+done

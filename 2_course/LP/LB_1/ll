@@ -1,0 +1,231 @@
+stud("Дима").
+stud("Герман").
+stud("Олег").
+
+predmet("биология").
+predmet("химия").
+predmet("история").
+predmet("математика").
+
+%Герман
+ger(X,List):- X = "Дима", member("история", List).
+ger("Герман",List):- ger("Олег",List).
+ger(_,List):-member("биология", List).
+ger(X,List):-findall(M,stud(M),L),length(L,I), I = 2, member(X,L), member("биология",List),member("химия",List).
+
+%Олег
+oleg(_,List):- member("математика",List).
+oleg(X,List):- X = "Герман", member("история",List).
+oleg(X,List):- X = "Олег", oleg("Дима",List2), subtract(List,List2,L),length(L, 1).
+oleg(X,List):- member(X,["Герман","Дима"]), member("химия", List).
+
+%Дима
+dima(_,List):-member(M,List).
+dima(X,List):- x = "Дима",member("математика",List).
+dima(X,List):- member(X,["Герман","Дима"]), not(member("химия", List)).
+
+
+---------------
+
+singl_elem([Head|_],X):- X = Head.
+singl_elem([_|Tail],X):-singl_elem(Tail,X).
+
+
+subtract([], _, []) :- !.
+subtract([A|C], B, D) :-
+        member(A, B), !,
+        subtract(C, B, D).
+subtract([A|B], C, [A|D]) :-
+        subtract(B, C, D).
+
+
+sublist([],_).
+sublist([X|XS],[X|XSS]) :- sublist( XS, XSS ).
+sublist([X|XS],[_|XSS]) :- sublist( [X|XS], XSS ).
+
+
+
+
+%[[X,[]],[Y,[]],[Z,[]]] - Data
+
+uvlec(X,Chem,Data):- singl_elem(Data,M),append([X],[Pr],M),member(Chem,Pr).
+
+----------------------
+
+%[[X,[]],[Y,[]],[Z,[]]] - Data
+
+uvlec(X,Chem,Data):- singl_elem(Data,M),length(Data,3),append([X],[Pr],M),member(Chem,Pr),length(Pr,3).
+alllike(X,Data,Prs):-singl_elem(Data,M),append([X],[Prs],M).
+
+
+ger(Data):-uvlec("Дима","история",Data).
+ger(Data):-alllike("Герман",Data,P1),alllike("Олег",Data,P2),P1=P2.
+ger(Data):-uvlec(_,"биология",Data).
+ger(Data):-uvlec(X1,"химия",Data),uvlec(X1,"биология",Data),uvlec(X2,"химия",Data),uvlec(X2,"биология",Data).
+
+oleg(Data):-uvlec(_,"математика",Data).
+oleg(Data):-uvlec("Герман","история",Data).
+oleg(Data):-alllike("Олег",Data,Prs1),alllike("Дима",Data,Prs2),subtract(Prs1,Prs2,L),length(L, 1).
+oleg(Data):-uvlec("Дима","химия",Data),uvlec("Герман","химия",Data).
+
+dima(Data):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),intersect(P1,P2,L1),intersect(P3,L1,L2),length(L2,1).
+dima(Data):-uvlec("Дима","математика",Data).
+dima(Data):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),P1\=P2,P2\=P3,P1\=P3.
+dima(Data):-not(uvlec("Герман","химия",Data)).
+
+solve(Solve):-ger(Solve),ger(Solve),oleg(Solve),oleg(Solve),dima(Solve),dima(Solve).
+
+----------------------------------------------
+
+ger(Ger,Oleg,Dima,1):-member("история",Dima),not(member("история",Ger)),not(member("история",Oleg)).
+ger(Ger,Oleg,_,2):- Ger = Oleg.
+ger(Ger,Oleg,Dima,3):-member("биология",Ger),member("биология",Oleg),member("биология",Dima).
+ger(Ger,Oleg,Dima,4):-twoiz(Ger,Oleg,Dima).
+
+twoiz(Ger,Oleg,_):- member("биология",Ger),member("химия",Ger),member("биология",Oleg),member("химия",Oleg).
+twoiz(Ger,_,Dima):- member("биология",Ger),member("химия",Ger),member("биология",Dima),member("химия",Dima).
+twoiz(_,Oleg,Dima):- member("биология",Dima),member("химия",Dima),member("биология",Oleg),member("химия",Oleg).
+
+oleg(Ger,Oleg,Dima,1):-member("математика",Ger),member("математика",Oleg),member("математика",Dima).
+oleg(Ger,_,_,2):-member("история",Ger).
+oleg(_,Oleg,Dima,3):-member(X1,Oleg),not(member(X1,Dima)),member(X2,Oleg),member(X2,Dima),member(X3,Oleg),member(X3,Dima),X2\=X3.
+oleg(Ger,_,Dima,4):-member("химия",Ger),member("химия",Dima).
+
+
+dima(Ger,Oleg,Dima,X,1):-member(X,Ger),member(X,Oleg),member(X,Dima),delete(Ger,X, L1),delete(Oleg,X, L2),delete(Dima,X, L3),L1\=L2,L2\=L3,L1\=L3.
+dima(Ger,Oleg,Dima,2):-member("математика",Dima),not(member("математика",Ger)),not(member("математика",Oleg)).
+dima(Ger,_,Dima,3):-not(member("химия",Ger)),not(member("химия",Dima)).
+dima(Ger,Oleg,Dima,4):-Ger\=Oleg, Oleg\=Dima,Ger\=Dima.
+
+%Data(Ger,Oleg,Dima)
+check(A,B,X):-member(X,A),member(X,B).
+
+
+
+solution(Ger,Oleg,Dima):-length(Ger,3),length(Oleg,3),length(Dima,3),
+        ger(Ger,Oleg,Dima,X1),ger(Ger,Oleg,Dima,Y1),
+        oleg(Ger,Oleg,Dima,X2),oleg(Ger,Oleg,Dima,Y2),
+        dima(Ger,Oleg,Dima,X3),dima(Ger,Oleg,Dima,Y3),
+        uniq(Ger),uniq(Oleg),uniq(Dima),
+        write(X1),write(" "),write(Y1),write(" "),write(X2),write(" "),write(Y2),write(" "),write(X3),write(" "),write(Y3),write("\n"),
+        X1\=Y1, X2\=Y2,X3\=Y3.
+
+
+---------------------------------------
+
+
+%[[X,[]],[Y,[]],[Z,[]]] - Data
+
+uvlec(X,Chem,Data):- singl_elem(Data,M),length(Data,3),append([X],[Pr],M),member(Chem,Pr),length(Pr,3).
+alllike(X,Data,Prs):-singl_elem(Data,M),append([X],[Prs],M).
+
+
+ger(Data,1):-uvlec("Дима","история",Data),not(uvlec("Герман","история",Data)),not(uvlec("Олег","история",Data)).
+ger(Data,2):-alllike("Герман",Data,P1),alllike("Олег",Data,P2),P1=P2.
+ger(Data,3):-uvlec(_,"биология",Data).
+ger(Data,4):-uvlec(X1,"химия",Data),uvlec(X1,"биология",Data),uvlec(X2,"химия",Data),uvlec(X2,"биология",Data),X1\=X2.
+
+oleg(Data,1):-uvlec(_,"математика",Data).
+oleg(Data,2):-uvlec("Герман","история",Data).
+oleg(Data,3):-alllike("Олег",Data,Prs1),alllike("Дима",Data,Prs2),alllike("Олег",Data,Prs3),subtract(Prs1,Prs2,L),subtract(Prs3,Prs2,L1),length(L, 1),length(L1,1).
+oleg(Data,4):-uvlec("Дима","химия",Data),uvlec("Герман","химия",Data).
+
+dima(Data,1):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),intersect(P1,P2,L1),intersect(P3,L1,L2),length(L2,1).
+dima(Data,2):-uvlec("Дима","математика",Data),not(uvlec("Герман","математика",Data)),not(uvlec("Олег","математика",Data)).
+dima(Data,3):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),P1\=P2,P2\=P3,P1\=P3.
+dima(Data,4):-not(uvlec("Герман","химия",Data)),not(uvlec("Дима","химия",Data)).
+
+
+solve(Solve):-length(Solve,3),alllike("Герман",Solve,P1),alllike("Олег",Solve,P2),alllike("Дима",Solve,P3),
+        length(P1,3),length(P2,3),length(P3,3),
+        ger(Solve,X1),ger(Solve,Y1),oleg(Solve,X2),oleg(Solve,Y2),dima(Solve,X3),dima(Solve,Y3),
+        write(X1),write(" "),write(Y1),write(" "),write(X2),write(" "),write(Y2),write(" "),write(X3),write(" "),write(Y3),write("\n"),
+        X1\=Y1,X2\=Y2,X3\=Y3,uniq(P1),uniq(P2),uniq(P3).
+
+
+
+----------
+ger(Ger,Oleg,Dima,1):-member("история",Dima),not(member("история",Ger)),not(member("история",Oleg)).
+ger(Ger,Oleg,_,2):- Ger = Oleg.
+ger(Ger,Oleg,Dima,3):-member("биология",Ger),member("биология",Oleg),member("биология",Dima).
+ger(Ger,Oleg,Dima,4):-twoiz(Ger,Oleg,Dima).
+
+twoiz(Ger,Oleg,_):- member("биология",Ger),member("химия",Ger),member("биология",Oleg),member("химия",Oleg).
+twoiz(Ger,_,Dima):- member("биология",Ger),member("химия",Ger),member("биология",Dima),member("химия",Dima).
+twoiz(_,Oleg,Dima):- member("биология",Dima),member("химия",Dima),member("биология",Oleg),member("химия",Oleg).
+
+oleg(Ger,Oleg,Dima,1):-member("математика",Ger),member("математика",Oleg),member("математика",Dima).
+oleg(Ger,_,_,2):-member("история",Ger).
+oleg(_,Oleg,Dima,3):-member(X1,Oleg),not(member(X1,Dima)),member(X2,Oleg),member(X2,Dima),member(X3,Oleg),member(X3,Dima),X2\=X3.
+oleg(Ger,_,Dima,4):-member("химия",Ger),member("химия",Dima).
+
+dima(Ger,Oleg,Dima,1):-intersect(Ger,Oleg,L1),intersect(Dima,L1,L2),length(L2,1).
+dima(Ger,Oleg,Dima,2):-member("математика",Dima),not(member("математика",Ger)),not(member("математика",Oleg)).
+dima(Ger,_,Dima,3):-not(member("химия",Ger)),not(member("химия",Dima)).
+dima(Ger,Oleg,Dima,4):-intersect(Ger,Oleg,L1),intersect(Ger,Dima,L2),intersect(Oleg,Dima,L3),
+        length(L1,XL1),length(L2,XL2),length(L3,XL3),XL1 < 3,XL2 < 3,XL3 < 3.
+
+%Data(Ger,Oleg,Dima)
+check(A,B,X):-member(X,A),member(X,B).
+
+
+threeelem([_|Tail],Tail):-length(Tail,3).
+dd([X1,X2],X1,X2).
+chisl(X1,Y1,X4,Y4):-append(X1,Y1,L),subtract([1,2,3,4],L,L1),dd(L1,X4,Y4).
+check(N,S):-
+        remove(T1,[1,2,3,4],R), remove(T2,R,[L1,L2]),
+        say(N,T1,S), say(N,T2,S), not(say(N,L1,S)), not(say(N,L2,S)).
+
+solution(Ger,Oleg,Dima):- permutation(["биология","химия","математика","история"],G),
+        permutation(["биология","химия","математика","история"],O),
+        permutation(["биология","химия","математика","история"],D),
+        threeelem(G,Ger),threeelem(O,Oleg),threeelem(D,Dima),
+        ger(Ger,Oleg,Dima,X1),ger(Ger,Oleg,Dima,Y1),
+        oleg(Ger,Oleg,Dima,X2),oleg(Ger,Oleg,Dima,Y2),
+        dima(Ger,Oleg,Dima,X3),dima(Ger,Oleg,Dima,Y3),
+        not(ger(Ger,Oleg,Dima,X4)),not(ger(Ger,Oleg,Dima,Y4)),
+        not(oleg(Ger,Oleg,Dima,X5)),not(oleg(Ger,Oleg,Dima,Y5)),
+        not(dima(Ger,Oleg,Dima,X6)),not(dima(Ger,Oleg,Dima,Y6)),
+        uniq(Ger),uniq(Oleg),uniq(Dima).
+       % write(X1),write(" "),write(Y1),write(" "),write(X2),write(" "),write(Y2),write(" "),write(X3),write(" "),write(Y3),write("\n").
+
+
+
+       -------------------
+
+       %[[X,[]],[Y,[]],[Z,[]]] - Data
+
+uvlec(X,Chem,Data):- singl_elem(Data,M),length(Data,3),append([X],[Pr],M),member(Chem,Pr),length(Pr,3).
+alllike(X,Data,Prs):-singl_elem(Data,M),append([X],[Prs],M).
+
+
+say(g,Data,1):-uvlec("Дима","история",Data),not(uvlec("Герман","история",Data)),not(uvlec("Олег","история",Data)).
+say(g,Data,2):-alllike("Герман",Data,P1),alllike("Олег",Data,P2),P1=P2.
+say(g,Data,3):-uvlec(_,"биология",Data).
+say(g,Data,4):-uvlec(X1,"химия",Data),uvlec(X1,"биология",Data),uvlec(X2,"химия",Data),uvlec(X2,"биология",Data),X1\=X2.
+
+say(o,Data,1):-uvlec(_,"математика",Data).
+say(o,Data,2):-uvlec("Герман","история",Data).
+say(o,Data,3):-alllike("Олег",Data,Prs1),alllike("Дима",Data,Prs2),alllike("Олег",Data,Prs3),subtract(Prs1,Prs2,L),subtract(Prs3,Prs2,L1),length(L, 1),length(L1,1).
+say(o,Data,4):-uvlec("Дима","химия",Data),uvlec("Герман","химия",Data).
+
+say(d,Data,1):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),intersect(P1,P2,L1),intersect(P3,L1,L2),length(L2,1).
+say(d,Data,2):-uvlec("Дима","математика",Data),not(uvlec("Герман","математика",Data)),not(uvlec("Олег","математика",Data)).
+say(d,Data,3):-alllike("Олег",Data,P1),alllike("Дима",Data,P2),alllike("Герман",Data,P3),P1\=P2,P2\=P3,P1\=P3.
+say(d,Data,4):-not(uvlec("Герман","химия",Data)),not(uvlec("Дима","химия",Data)).
+
+threeelem([_|Tail],Tail):-length(Tail,3).
+check(N,S):-
+        delete([1,2,3,4],T1,R), delete(R,T2,[L1,L2]),
+        say(N,S,T1), say(N,S,T2), not(say(N,S,L1)), not(say(N,S,L2)).
+
+solve(Solve):-
+        permutation(["биология","химия","математика","история"],G),
+        permutation(["биология","химия","математика","история"],O),
+        permutation(["биология","химия","математика","история"],D),
+        threeelem(G,P1),threeelem(O,P2),threeelem(D,P3),length(Solve,3),alllike("Герман",Solve,P1),alllike("Олег",Solve,P2),alllike("Дима",Solve,P3),
+        length(P1,3),length(P2,3),length(P3,3),
+        write(1),
+        check(g,Solve),write(2),check(o,Solve),write(3),check(d,Solve),write(4),
+
+        uniq(P1),uniq(P2),uniq(P3).

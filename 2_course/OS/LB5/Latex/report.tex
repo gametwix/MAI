@@ -1,0 +1,693 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\usepackage{upquote}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Лабораторная работа \textnumero 5 по курсу \enquote{Операционные системы}
+
+        \vspace{48pt}
+
+        Создание динамических библиотек. 
+        
+        Создание программ, которые используют функции динамических библиотек.
+    \end{center}
+    
+    \vspace{125pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,А. Мохляков \\
+    Преподаватель: & Е.\,С. Миронов \\
+    Группа: & М8О-208Б-19 \\
+    Вариант: & 34 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+Требуется создать динамические библиотеки, которые реализуют определенный функционал. 
+Далее использовать данные библиотеки 2-мя способами:
+
+\begin{itemize}
+    \item Во время компиляции (на этапе «линковки»/linking)
+    \item Во время исполнения программы. Библиотеки загружаются в память с помощью 
+            интерфейса ОС для работы с динамическими библиотеками
+\end{itemize}
+
+В лабораторной работе необходимо получить следующие части:
+
+\begin{itemize}
+    \item Динамические библиотеки, реализующие контракты
+    \item Тестовая программа (программа №1), которая используют одну из библиотек, используя 
+    знания полученные на этапе компиляции.
+    \item Тестовая программа (программа №2), которая загружает библиотеки, используя только их 
+    местоположение и контракты.
+\end{itemize}
+
+Провести анализ двух типов использования библиотек.
+
+Пользовательский ввод должен быть организован следующим образом:
+
+\begin{itemize}
+    \item Команда <<0>>: переключить одну реализацию контракты на другую
+    \item Команда <<1 args>>: вызов первой функции контрактов
+    \item Команда <<2 args>>: вызов второй функции контрактов
+\end{itemize}
+
+Контракты:
+\begin{itemize}
+    \item Подсчет площади плоской геометрической фигуры по двум сторонам для прямоугольника и прямоугольного треугольника
+    \item Перевод числа x из десятичной системы счисления в двоичную и троичную.
+\end{itemize}
+
+\section{Сведения о программе}
+
+Программа написанна на Си в Unix подобной операционной системе на базе ядра Linux.
+
+Контракты описаны в файле functions.h, а реализация functions\_1.с и functions\_2.с.
+
+\begin{enumerate}
+    \item Создание объектных файлов
+    \item Компиляция библиотек с ключем -shared. Получаем динамические библиотеки с расширением .so 
+    \item Линковка библиотеки к необходимой программе
+\end{enumerate}
+
+Для динамической загрузки библиотек используется библиотека dlfcn.h
+
+\section{Общий метод и алгоритм решения}
+
+Программа принимает в себя команды: 
+\begin{itemize}
+    \item В случае команды 1, мы считываем 2 стороны и находим площадь либо по формуле $a*b$, либо $\frac{a*b}{2}$.
+    \item В случае команды 2, мы считываем число в десятичной системе, и переводит в двоичную или троичную систему, путем выписывания остатков от деления в массив вывода.
+    \item В случае команды 0, мы закрываем старую библиотеку, открываем вторую и заменяем указатели на функции.
+\end{itemize}
+
+Для завершения программы нужно ввести комбинацию завершения ввода \--- CTRL+D.
+
+\section{Листинг программы}
+
+{\large\textbf{functions.h}}
+
+\begin{lstlisting}[language=C]
+#pragma once
+
+float Square(float a, float b);
+char* Translation(long x);
+\end{lstlisting}
+
+{\large\textbf{functions\_1.c}}
+
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include "functions.h"
+
+float Square(float a, float b){
+    return a*b;
+}
+
+char* Translation(long x){
+    char *result = NULL;
+    int size = floor(log2(x)) + 2;
+    result = malloc(sizeof(char) * size);
+    result[size - 1] = '\0';
+    while(x > 0){
+        --size;
+        result[size - 1] = (x % 2) + '0';
+        x /= 2;
+    }
+    return result;
+}    
+\end{lstlisting}
+
+{\large\textbf{functions\_2.c}}
+
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include "functions.h"
+
+double my_log(double num, double base){
+    return log2(num)/log2(base);
+}
+
+float Square(float a, float b){
+    return a*b/2;
+}
+
+char* Translation(long x){
+    char *result = NULL;
+    int size = floor(my_log(x,3)) + 2;
+    result = malloc(sizeof(char) * size);
+    result[size - 1] = '\0';
+    while(x > 0){
+        --size;
+        result[size - 1] = (x % 3) + '0';
+        x /= 3;
+    }
+    return result;
+}    
+\end{lstlisting}
+
+{\large\textbf{main\_dynamic.c}}
+
+\begin{lstlisting}[language=C]
+#include <dlfcn.h>
+#include <stdio.h>
+
+int main(){
+    float (*Square)(float, float) = NULL;
+    char* (*Translation)(long) = NULL;
+    int sw = -1;
+    char* libs[] = {"lib1.so","lib2.so"};
+    int lib = 0;
+    void* handle = NULL;
+    handle = dlopen(libs[lib],RTLD_LAZY);
+    if (!handle) {
+        printf("%s\n", dlerror());
+        return 1;
+    }
+    Square = dlsym(handle,"Square");
+    Translation = dlsym(handle,"Translation");
+    while(scanf("%d",&sw) > 0){
+        if(sw == 1){
+            float size_1, size_2;
+            scanf("%f %f",&size_1,&size_2);
+            printf("%f\n",(Square)(size_1,size_2));
+        } else if(sw == 2) {
+            long x = 0;
+            scanf("%ld",&x);
+            printf("%s\n",Translation(x));
+        } else if(sw == 0) {
+            dlclose(handle);
+            lib = (lib + 1) % 2;
+            handle = dlopen(libs[lib],RTLD_LAZY);
+            Square = dlsym(handle,"Square");
+            Translation = dlsym(handle,"Translation");
+        }
+    }
+    dlclose(handle);
+}
+\end{lstlisting}
+
+{\large\textbf{main\_static.c}}
+
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+#include "functions.h"
+
+int main(){
+    int sw = -1;
+    while(scanf("%d",&sw) > 0){
+        if(sw == 1){
+            float size_1, size_2;
+            scanf("%f %f",&size_1,&size_2);
+            printf("%f\n",Square(size_1,size_2));
+        } else if(sw == 2) {
+            long x = 0;
+            scanf("%ld",&x);
+            printf("%s\n",Translation(x));
+        }
+    }
+    return 0;
+}
+\end{lstlisting}
+
+{\large\textbf{Makefile}}
+
+\begin{lstlisting}[language=C]
+CC = gcc
+CFLAGS = -g -c -Wall
+ADDLIB = -lm
+
+REALIZE_STATIC_LIB = 1
+
+all: linking dynamic 
+
+linking: linking.o lib$(REALIZE_STATIC_LIB).so 
+$(CC) linking.o -o linking -L. -l$(REALIZE_STATIC_LIB) $(ADDLIB)
+dynamic: main_dynamic.o lib1.so lib2.so
+$(CC) main_dynamic.o -o dynamic $(ADDLIB) -ldl
+
+libfunc_1.o:
+$(CC) $(CFLAGS) -fpic functions_1.c -o libfunc_1.o 
+libfunc_2.o:
+$(CC) $(CFLAGS) -fpic functions_2.c -o libfunc_2.o
+linking.o: main_static.c
+$(CC) $(CFLAGS) main_static.c -o linking.o
+dynamic.o: main_dynamic.c 
+$(CC) $(CFLAGS) main_dynamic.c -o dynamic.o
+
+
+lib1.so: libfunc_1.o
+$(CC) -shared libfunc_1.o -o lib1.so $(ADDLIB)
+lib2.so: libfunc_2.o
+$(CC) -shared libfunc_2.o -o lib2.so $(ADDLIB)
+
+clean:
+rm -r *.o *.so linking dynamic
+\end{lstlisting}
+
+\pagebreak
+
+\section{Демонстрация работы программы}
+
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ make
+gcc -g -c -Wall main_static.c -o linking.o
+gcc -g -c -Wall -fpic functions_1.c -o libfunc_1.o
+gcc -shared libfunc_1.o -o lib1.so -lm
+gcc linking.o -o linking -L. -l1 -lm
+gcc -g -c -Wall   -c -o main_dynamic.o main_dynamic.c
+gcc -g -c -Wall -fpic functions_2.c -o libfunc_2.o
+gcc -shared libfunc_2.o -o lib2.so -lm
+gcc main_dynamic.o -o dynamic -lm -ldl
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ ./linking
+1
+2 4
+8.000000
+2
+6
+110
+2
+16
+10000
+2
+4563
+1000111010011
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ ./dynamic
+1
+2 4
+8.000000
+2
+6
+110
+0
+1
+2 4
+4.000000
+2 6
+20
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$
+ ltrace -o log_link.txt ./linking
+1
+2 4
+8.000000
+2
+6
+110
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ cat log_link.txt
+__isoc99_scanf(0x7f799b400a42, 0x7fffdbee5098, 
+0x7fffdbee51a8, 0x7f799b4009b0) = 1
+__isoc99_scanf(0x7f799b400a34, 0x7fffdbee509c, 0x7fffdbee50a0, 16) = 2
+Square(0, 2, 0x7f799addd8d0, 0x7fffdbee4b41) = 0x40000000
+printf("%f\textbackslash{n}", 8.000000) = 9
+__isoc99_scanf(0x7f799b400a42, 0x7fffdbee5098, 0, 0) = 1
+__isoc99_scanf(0x7f799b400a3e, 0x7fffdbee50a0, 0x7f799addd8d0, 16) = 1
+Translation(6, 1, 0x7f799addd8d0, 16) = 0x7fffd42e3280
+puts("110") = 4
+__isoc99_scanf(0x7f799b400a42, 0x7fffdbee5098, 
+0x7f799addd8c0, 0x7fffd42e1010) = 0xffffffff
++++ exited (status 0) +++
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$
+ ltrace -o log_dynamic.txt ./dynamic
+1
+2 4
+8.000000
+2
+6
+110
+0
+1
+2 4
+4.000000
+2
+6
+20
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ cat log_dynamic.txt
+dlopen("lib1.so", 1) = 0x7fffee054290
+dlsym(0x7fffee054290, "Square") = 0x7f4659be06ea
+dlsym(0x7fffee054290, "Translation") = 0x7f4659be0704
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 1, 0) = 1
+__isoc99_scanf(0x7f465a800b77, 0x7ffff60316f8, 0x7ffff6031700, 16) = 2
+printf("%f\textbackslash{n}", 8.000000) = 9
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 0, 0) = 1
+__isoc99_scanf(0x7f465a800b81, 0x7ffff6031700, 0x7f465a1dd8d0, 16) = 1
+puts("110") = 4
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 0x7f465a1dd8c0,
+ 0x7fffee054010) = 1
+dlclose(0x7fffee054290) = 0
+dlopen("lib2.so", 1) = 0x7fffee054290
+dlsym(0x7fffee054290, "Square") = 0x7f4659be0784
+dlsym(0x7fffee054290, "Translation") = 0x7f4659be07aa
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 1, 0) = 1
+__isoc99_scanf(0x7f465a800b77, 0x7ffff60316f8, 0x7ffff6031700, 16) = 2
+printf("%f\textbackslash{n}", 4.000000) = 9
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 0, 0) = 1
+__isoc99_scanf(0x7f465a800b81, 0x7ffff6031700, 0x7f465a1dd8d0, 16) = 1
+puts("20") = 3
+__isoc99_scanf(0x7f465a800b85, 0x7ffff60316f4, 0x7f465a1dd8c0,
+ 0x7fffee054010) = 0xffffffff
+dlclose(0x7fffee054290) = 0
++++ exited (status 0) +++
+
+\end{alltt}
+
+\section{Strace}
+
+{\scriptsize 
+\begin{verbatim}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ strace -o str_link.txt ./linking
+1
+2 4
+8.000000
+2
+6
+110
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ cat str_link.txt
+execve("./linking", ["./linking"], 0x7ffca2774700 /* 30 vars */) = 0
+brk(NULL)                               = 0x5564ac9a0000
+arch_prctl(0x3001 /* ARCH_??? */, 0x7ffd36746850) = -1 EINVAL (Invalid argument)
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./lib1.so", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\20\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=16344, ...}) = 0
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7feec9a7d000
+getcwd("/home/pavel/Project/mai/2_course/OS/LB5", 128) = 40
+mmap(NULL, 16448, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7feec9a78000
+mmap(0x7feec9a79000, 4096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7feec9a79000
+mmap(0x7feec9a7a000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7feec9a7a000
+mmap(0x7feec9a7b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7feec9a7b000
+close(3)                                = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=45372, ...}) = 0
+mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7feec9a6c000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360q\2\0\0\0\0\0"..., 832) = 832
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+pread64(3, "\4\0\0\0\20\0\0\0\5\0\0\0GNU\0\2\0\0\300\4\0\0\0\3\0\0\0\0\0\0\0", 32, 848) = 32
+pread64(3, "\4\0\0\0\24\0\0\0\3\0\0\0GNU\0\t\233\222%\274\260\320\31\331\326\10\204\276X>\263"..., 68, 880) = 68
+fstat(3, {st_mode=S_IFREG|0755, st_size=2029224, ...}) = 0
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+pread64(3, "\4\0\0\0\20\0\0\0\5\0\0\0GNU\0\2\0\0\300\4\0\0\0\3\0\0\0\0\0\0\0", 32, 848) = 32
+pread64(3, "\4\0\0\0\24\0\0\0\3\0\0\0GNU\0\t\233\222%\274\260\320\31\331\326\10\204\276X>\263"..., 68, 880) = 68
+mmap(NULL, 2036952, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7feec987a000
+mprotect(0x7feec989f000, 1847296, PROT_NONE) = 0
+mmap(0x7feec989f000, 1540096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7feec989f000
+mmap(0x7feec9a17000, 303104, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x19d000) = 0x7feec9a17000
+mmap(0x7feec9a62000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7feec9a62000
+mmap(0x7feec9a68000, 13528, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7feec9a68000
+close(3)                                = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\363\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=1369352, ...}) = 0
+mmap(NULL, 1368336, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7feec972b000
+mmap(0x7feec973a000, 684032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xf000) = 0x7feec973a000
+mmap(0x7feec97e1000, 618496, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xb6000) = 0x7feec97e1000
+mmap(0x7feec9878000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14c000) = 0x7feec9878000
+close(3)                                = 0
+mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7feec9728000
+arch_prctl(ARCH_SET_FS, 0x7feec9728740) = 0
+mprotect(0x7feec9a62000, 12288, PROT_READ) = 0
+mprotect(0x7feec9878000, 4096, PROT_READ) = 0
+mprotect(0x7feec9a7b000, 4096, PROT_READ) = 0
+mprotect(0x5564ac1c2000, 4096, PROT_READ) = 0
+mprotect(0x7feec9aac000, 4096, PROT_READ) = 0
+munmap(0x7feec9a6c000, 45372)           = 0
+fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+brk(NULL)                               = 0x5564ac9a0000
+brk(0x5564ac9c1000)                     = 0x5564ac9c1000
+read(0, "1\n", 1024)                    = 2
+read(0, "2 4\n", 1024)                  = 4
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+write(1, "8.000000\n", 9)               = 9
+read(0, "2\n", 1024)                    = 2
+read(0, "6\n", 1024)                    = 2
+write(1, "110\n", 4)                    = 4
+read(0, "", 1024)                       = 0
+exit_group(0)                           = ?
++++ exited with 0 +++
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ strace -o str_dynam.txt ./dynamic
+1
+2 4
+8.000000
+2
+6
+110
+0
+1
+2 4
+4.000000
+2
+6
+20
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB5$ cat str_dynam.txt
+execve("./dynamic", ["./dynamic"], 0x7ffd22daa420 /* 30 vars */) = 0
+brk(NULL)                               = 0x560840ff4000
+arch_prctl(0x3001 /* ARCH_??? */, 0x7ffd71bf0af0) = -1 EINVAL (Invalid argument)
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=45372, ...}) = 0
+mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f8f17231000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libdl.so.2", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0 \22\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=18816, ...}) = 0
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8f1722f000
+mmap(NULL, 20752, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f17229000
+mmap(0x7f8f1722a000, 8192, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7f8f1722a000
+mmap(0x7f8f1722c000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3000) = 0x7f8f1722c000
+mmap(0x7f8f1722d000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3000) = 0x7f8f1722d000
+close(3)                                = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360q\2\0\0\0\0\0"..., 832) = 832
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+pread64(3, "\4\0\0\0\20\0\0\0\5\0\0\0GNU\0\2\0\0\300\4\0\0\0\3\0\0\0\0\0\0\0", 32, 848) = 32
+pread64(3, "\4\0\0\0\24\0\0\0\3\0\0\0GNU\0\t\233\222%\274\260\320\31\331\326\10\204\276X>\263"..., 68, 880) = 68
+fstat(3, {st_mode=S_IFREG|0755, st_size=2029224, ...}) = 0
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+pread64(3, "\4\0\0\0\20\0\0\0\5\0\0\0GNU\0\2\0\0\300\4\0\0\0\3\0\0\0\0\0\0\0", 32, 848) = 32
+pread64(3, "\4\0\0\0\24\0\0\0\3\0\0\0GNU\0\t\233\222%\274\260\320\31\331\326\10\204\276X>\263"..., 68, 880) = 68
+mmap(NULL, 2036952, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f17037000
+mprotect(0x7f8f1705c000, 1847296, PROT_NONE) = 0
+mmap(0x7f8f1705c000, 1540096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7f8f1705c000
+mmap(0x7f8f171d4000, 303104, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x19d000) = 0x7f8f171d4000
+mmap(0x7f8f1721f000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f8f1721f000
+mmap(0x7f8f17225000, 13528, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f8f17225000
+close(3)                                = 0
+mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8f17034000
+arch_prctl(ARCH_SET_FS, 0x7f8f17034740) = 0
+mprotect(0x7f8f1721f000, 12288, PROT_READ) = 0
+mprotect(0x7f8f1722d000, 4096, PROT_READ) = 0
+mprotect(0x56083f417000, 4096, PROT_READ) = 0
+mprotect(0x7f8f1726a000, 4096, PROT_READ) = 0
+munmap(0x7f8f17231000, 45372)           = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib1.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./lib1.so", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\20\0\0\0\0\0\0"..., 832) = 832
+brk(NULL)                               = 0x560840ff4000
+brk(0x560841015000)                     = 0x560841015000
+fstat(3, {st_mode=S_IFREG|0755, st_size=16344, ...}) = 0
+getcwd("/home/pavel/Project/mai/2_course/OS/LB5", 128) = 40
+mmap(NULL, 16448, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f17238000
+mmap(0x7f8f17239000, 4096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7f8f17239000
+mmap(0x7f8f1723a000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f8f1723a000
+mmap(0x7f8f1723b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f8f1723b000
+close(3)                                = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=45372, ...}) = 0
+mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f8f17028000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\363\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=1369352, ...}) = 0
+mmap(NULL, 1368336, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f16ed9000
+mmap(0x7f8f16ee8000, 684032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xf000) = 0x7f8f16ee8000
+mmap(0x7f8f16f8f000, 618496, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xb6000) = 0x7f8f16f8f000
+mmap(0x7f8f17026000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14c000) = 0x7f8f17026000
+close(3)                                = 0
+mprotect(0x7f8f17026000, 4096, PROT_READ) = 0
+mprotect(0x7f8f1723b000, 4096, PROT_READ) = 0
+munmap(0x7f8f17028000, 45372)           = 0
+fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+read(0, "1\n", 1024)                    = 2
+read(0, "2 4\n", 1024)                  = 4
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+write(1, "8.000000\n", 9)               = 9
+read(0, "2\n", 1024)                    = 2
+read(0, "6\n", 1024)                    = 2
+write(1, "110\n", 4)                    = 4
+read(0, "0\n", 1024)                    = 2
+munmap(0x7f8f17238000, 16448)           = 0
+munmap(0x7f8f16ed9000, 1368336)         = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/lib2.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./lib2.so", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\20\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=16384, ...}) = 0
+getcwd("/home/pavel/Project/mai/2_course/OS/LB5", 128) = 40
+mmap(NULL, 16456, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f17238000
+mmap(0x7f8f17239000, 4096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7f8f17239000
+mmap(0x7f8f1723a000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f8f1723a000
+mmap(0x7f8f1723b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f8f1723b000
+close(3)                                = 0
+openat(AT_FDCWD, "./tls/x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./tls/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./x86_64/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "./libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=45372, ...}) = 0
+mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f8f17028000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\363\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=1369352, ...}) = 0
+mmap(NULL, 1368336, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8f16ed9000
+mmap(0x7f8f16ee8000, 684032, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xf000) = 0x7f8f16ee8000
+mmap(0x7f8f16f8f000, 618496, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xb6000) = 0x7f8f16f8f000
+mmap(0x7f8f17026000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14c000) = 0x7f8f17026000
+close(3)                                = 0
+mprotect(0x7f8f17026000, 4096, PROT_READ) = 0
+mprotect(0x7f8f1723b000, 4096, PROT_READ) = 0
+munmap(0x7f8f17028000, 45372)           = 0
+read(0, "1\n", 1024)                    = 2
+read(0, "2 4\n", 1024)                  = 4
+write(1, "4.000000\n", 9)               = 9
+read(0, "2\n", 1024)                    = 2
+read(0, "6\n", 1024)                    = 2
+write(1, "20\n", 3)                     = 3
+read(0, "", 1024)                       = 0
+munmap(0x7f8f17238000, 16456)           = 0
+munmap(0x7f8f16ed9000, 1368336)         = 0
+exit_group(0)                           = ?
++++ exited with 0 +++
+\end{verbatim}
+}
+
+\pagebreak
+
+\section{Вывод}
+
+Лабораторная работа была направлена на изучение динамических библиотек в Unix подобных операционных
+системах. Для изучения создания и работы с ними мною было написанно 2 программ: одна
+подлючала динамичкие библиотеки на этапе компиляции, а вторая во время исполнения.
+
+Динамические библиотеки содержат функционал отдельно от программы и прередают его
+непосредственно во время исполнения. Из плюсов такого подхода можно выделить, что 
+во-первых, в таком случае размер результирующей программы меньше,во-вторых, одну и ту же библиотеку 
+можно использовать в нескольких программах не встраивая в код, чем можно также добиться снижения
+общего занимаемого пространства на диске, и в-третьих, что после исправления ошибок
+в библиотеке не нужно перекомпилировать все программы, достаточно перекомпилировать саму библиотеку.
+
+Однако у динамических библиотек есть и недостатки. Первый заключается в том, что
+вызов функции из динамической библиотеки происходит медленнее. Второй, что
+мы не можем подправить функционал библиотеки под конкретную программу не зацепив
+при этом других программ, работающих с этой библиотекой. И в-третьих, уже скомпилированная
+программа не будет работать на аналогичной системе без установленной динамической библиотеки.
+
+Тем не менее плюсы динамичеких библиотек исчерпывают их минусы в большенстве задач, 
+обратных случаях лучше обратиться к статическим библиотекам. В наше время с высокими мощностями 
+вычислительных систем становится более важным сэкономить объем памяти, используемый программой,
+чем время обращения к функции. Поэтому динамические библиотеки используются в большенстве 
+современных программ.
+\end{document}
+
+

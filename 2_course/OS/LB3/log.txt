@@ -1,0 +1,49 @@
+1273  execve("./main", ["./main", "4"], 0x7ffda4153150 /* 29 vars */) = 0
+1273  arch_prctl(0x3001 /* ARCH_??? */, 0x7ffc25e05a30) = -1 EINVAL (Invalid argument)
+1273  arch_prctl(ARCH_SET_FS, 0x7f2ea1d04740) = 0
+1273  clone(child_stack=0x7f2ea1d02fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1274], tls=0x7f2ea1d03700, child_tidptr=0x7f2ea1d039d0) = 1274
+1273  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1275], tls=0x7f2ea1502700, child_tidptr=0x7f2ea15029d0) = 1275
+1275  exit(0)                           = ?
+1274  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1275  +++ exited with 0 +++
+1273  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1274  <... clone resumed>, parent_tid=[1276], tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1276
+1273  <... clone resumed>, parent_tid=[1277], tls=0x7f2ea1502700, child_tidptr=0x7f2ea15029d0) = 1277
+1277  exit(0)                           = ?
+1277  +++ exited with 0 +++
+1276  exit(0)                           = ?
+1276  +++ exited with 0 +++
+1274  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1278], tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1278
+1274  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1278  exit(0 <unfinished ...>
+1274  <... clone resumed>, parent_tid=[1279], tls=0x7f2ea1502700, child_tidptr=0x7f2ea15029d0) = 1279
+1278  <... exit resumed>)               = ?
+1278  +++ exited with 0 +++
+1279  exit(0)                           = ?
+1279  +++ exited with 0 +++
+1274  exit(0)                           = ?
+1274  +++ exited with 0 +++
+1273  clone(child_stack=0x7f2ea1d02fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1280], tls=0x7f2ea1d03700, child_tidptr=0x7f2ea1d039d0) = 1280
+1273  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1280  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1273  <... clone resumed>, parent_tid=[1281], tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1281
+1280  <... clone resumed>, parent_tid=[1282], tls=0x7f2ea1502700, child_tidptr=0x7f2ea15029d0) = 1282
+1281  exit(0)                           = ?
+1281  +++ exited with 0 +++
+1282  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1283], tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1283
+1283  exit(0)                           = ?
+1283  +++ exited with 0 +++
+1282  exit(0)                           = ?
+1282  +++ exited with 0 +++
+1280  exit(0)                           = ?
+1280  +++ exited with 0 +++
+1273  write(1, "-454\n", 5)             = 5
+1273  write(1, "-36\n", 4)              = 4
+1273  write(1, "0\n", 2)                = 2
+1273  write(1, "3\n", 2)                = 2
+1273  write(1, "7\n", 2)                = 2
+1273  write(1, "23\n", 3)               = 3
+1273  write(1, "55\n", 3)               = 3
+1273  write(1, "254\n", 4)              = 4
+1273  exit_group(0)                     = ?
+1273  +++ exited with 0 +++

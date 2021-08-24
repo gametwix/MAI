@@ -1,0 +1,275 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Курсовой проект по курсу <<Операционные системы>>
+
+    \end{center}
+    
+    \vspace{140pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,А. Мохляков \\
+    Преподаватель: & Е.\,С. Миронов \\
+    Группа: & М8О-208Б-19 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+Необходимо написать 3-и программы. Далее будем обозначать эти программы A, B, C.
+
+Программа A принимает из стандартного потока ввода строки, а далее их отправляет программе С. Отправка строк должна производится построчно.Программа C печатает в стандартый вывод, полученную строку от программы A. После получения программа C отправляет программе А сообщение о том, что строка получена. До тех пор пока программа А не примет«сообщение о получение строки» от программы С, она не может отправялять следующую строку программе С.
+Программа B пишет в стандартный вывод количество отправленных символов программой А и количество принятыхсимволов программой С. Данную информацию программа B получает от программ A и C соответственно
+
+\section{Сведения о программе}
+
+Программы написаны на языке C++ для Unix подобной операционной системы на базе ядра Linux.
+Для связи между программ используются сокеты с помощью библиотеки ZeroMQ.
+
+Для работы запустите все три программы. Программа А считывает строки у пользователя пока пользователь не завершит ввод, после чего передает строки программе С. Та в свою очередь выводит их на экран. Обе программы отправляют длины отправленных
+и полученных строк программе B. Она выводит их на экран, по этим данным можно проверить не потерялись ли данные при отправке.
+
+\section{Общий метод и алгоритм решения}
+Программа А подключается к программе B и С. После чего она считывает строки от пользователя и записывает их в вектор. При нажатии CTRL+D пользователь сигнализирует о конце ввода. 
+Далее мы ждем подключение от программы С и начинаем передавать строки. В цикле передаем программе С троку и ждем сообщение об удачной передаче строки.
+После чего мы передаем программе B длину строки и также ждем ответа об удачной передаче. При завершеении работы программа A передает сообщения программам B и C,
+чтобы они также завершили работу.
+
+Программа С отправляет сообщение об удачном подключении к программе А, после чего попадает в бесконечный цикл.
+Там мы считываем сообщение от программы A, отправяем сообщение об учасном принятии сообщения и выводим сообщение на экран. Далее мы также отправляем 
+программе сообщение с длиной принятой строки и ждем от нее ответа об удачной передачи и повторяем цикл. Если мы приняли сообщение о завершении работы программы А, то мы входим из цикла и сами завершаем работу.
+
+Программа B принимает длины строк от программы А и С и выводит их на экран, после чего повторяет цикл. При пололучении сообщения о завершении работы программы А, входит из цикла и сами завершает работу. 
+
+
+\section{Листинг программы}
+
+{\large\textbf{A.cpp}}
+
+\begin{lstlisting}[language=C++]
+#include <iostream>
+#include <string>
+#include <vector>
+#include <zmq.hpp>
+
+#define ADDRESS_C "tcp://127.0.0.1:5555"
+#define ADDRESS_B "tcp://127.0.0.1:5556"
+
+int main(){
+    zmq::context_t context(1);
+    zmq::socket_t to_c(context,ZMQ_REP);
+    zmq::socket_t to_b(context,ZMQ_REQ);
+
+    to_c.bind(ADDRESS_C);
+    to_b.connect(ADDRESS_B);
+
+    std::string str;
+    std::vector<std::string> all_strings;
+    while(std::getline(std::cin,str)){
+        all_strings.push_back(str);
+    }
+
+    std::string ans;
+    zmq::message_t message;
+    to_c.recv(message);
+    ans = std::string(static_cast<char*>(message.data()), message.size());
+    if(ans != "Connect")
+        return 1;
+
+    for(auto& string: all_strings){
+        message = zmq::message_t(string.size());
+        memcpy(message.data(), string.c_str(), string.size());
+        to_c.send(message);
+        to_c.recv(message);
+        ans = std::string(static_cast<char*>(message.data()), message.size());
+        if(ans != "Success")
+            break;
+        std::string size = std::to_string(string.size());
+        message = zmq::message_t(size.size());
+        memcpy(message.data(), size.c_str(), size.size());
+        to_b.send(message);
+        to_b.recv(message);
+        ans = std::string(static_cast<char*>(message.data()), message.size());
+        if(ans != "OK")
+            break;
+    }
+    ans = "$$$";
+    message = zmq::message_t(ans.size());
+    memcpy(message.data(), ans.c_str(), ans.size());
+    to_c.send(message);
+
+    ans = "-1";
+    message = zmq::message_t(ans.size());
+    memcpy(message.data(), ans.c_str(), ans.size());
+    to_b.send(message);
+
+    to_c.unbind(ADDRESS_C);
+    to_b.disconnect(ADDRESS_B);
+
+    return 0;
+}
+\end{lstlisting}
+
+{\large\textbf{C.cpp}}
+
+\begin{lstlisting}[language=C++]
+#include <iostream>
+#include <string>
+#include <zmq.hpp>
+
+#define ADDRESS_A "tcp://127.0.0.1:5556"
+#define ADDRESS_C "tcp://127.0.0.1:5557"
+
+int main(){
+    zmq::context_t context(1);
+    zmq::socket_t to_a(context,ZMQ_REP);
+    zmq::socket_t to_c(context,ZMQ_REP);
+    std::string my_ans = "OK";
+    to_a.bind(ADDRESS_A);
+    to_c.bind(ADDRESS_C);
+    while(true){
+        zmq::message_t message_a;
+        to_a.recv(message_a);
+        std::string ans_a = std::string(static_cast<char*>(message_a.data()), message_a.size());
+        int size_str_a = std::stoi(ans_a);
+        if(size_str_a == -1)
+            break;
+        message_a = zmq::message_t(my_ans.size());
+        memcpy(message_a.data(), my_ans.c_str(), my_ans.size());
+        to_a.send(message_a);
+
+        zmq::message_t message_c;
+        to_c.recv(message_a);
+        std::string ans_c = std::string(static_cast<char*>(message_a.data()), message_a.size());
+        int size_str_c = std::stoi(ans_c);
+        message_c = zmq::message_t(my_ans.size());
+        memcpy(message_c.data(), my_ans.c_str(), my_ans.size());
+        to_c.send(message_c);
+
+        std::cout << "Size str send A: " << size_str_a << "\tSize str send C: " << size_str_c << std::endl;
+
+    }
+    to_a.unbind(ADDRESS_A);
+    to_c.unbind(ADDRESS_C);
+    return 0;
+}
+\end{lstlisting}
+
+{\large\textbf{B.cpp}}
+
+\begin{lstlisting}[language=C++]
+#include <iostream>
+#include <string>
+#include <zmq.hpp>
+
+#define ADDRESS_A "tcp://127.0.0.1:5556"
+#define ADDRESS_C "tcp://127.0.0.1:5557"
+
+int main(){
+    zmq::context_t context(1);
+    zmq::socket_t to_a(context,ZMQ_REP);
+    zmq::socket_t to_c(context,ZMQ_REP);
+    std::string my_ans = "OK";
+    to_a.bind(ADDRESS_A);
+    to_c.bind(ADDRESS_C);
+    while(true){
+        zmq::message_t message_a;
+        to_a.recv(message_a);
+        std::string ans_a = std::string(static_cast<char*>(message_a.data()), message_a.size());
+        int size_str_a = std::stoi(ans_a);
+        if(size_str_a == -1)
+            break;
+        message_a = zmq::message_t(my_ans.size());
+        memcpy(message_a.data(), my_ans.c_str(), my_ans.size());
+        to_a.send(message_a);
+
+        zmq::message_t message_c;
+        to_c.recv(message_a);
+        std::string ans_c = std::string(static_cast<char*>(message_a.data()), message_a.size());
+        int size_str_c = std::stoi(ans_c);
+        message_c = zmq::message_t(my_ans.size());
+        memcpy(message_c.data(), my_ans.c_str(), my_ans.size());
+        to_c.send(message_c);
+
+        std::cout << "Size str send A: " << size_str_a << "\tSize str send C: " << size_str_c << std::endl;
+
+    }
+    to_a.unbind(ADDRESS_A);
+    to_c.unbind(ADDRESS_C);
+    return 0;
+}
+\end{lstlisting}
+
+\section{Демонстрация работы программ}
+
+{\large\textbf{Программа А}}
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/KP$ ./A
+hello world
+check
+test
+I'm working
+\end{alltt}
+
+{\large\textbf{Программа С}}
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/KP$ ./C
+hello world
+check
+test
+I'm working
+\end{alltt}
+
+{\large\textbf{Программа B}}
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/KP$ ./B
+Size str send A: 11     Size str send C: 11
+Size str send A: 5      Size str send C: 5
+Size str send A: 4      Size str send C: 4
+Size str send A: 11     Size str send C: 11
+\end{alltt}
+
+\pagebreak
+
+\section{Вывод}
+
+Данная крусовая работа основывается на знаниях полученных в ходе изучения курса. По итогу мы получили нейколько программ, которые взаимодействуют друг с другом с помощью сокетов.
+Задача курсового проекта не сложна в реализации, но ее реализация обощает и закрепляет полученные в курсе знания.
+
+\end{document}
+
+

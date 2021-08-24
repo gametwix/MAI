@@ -1,0 +1,501 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Лабораторная работа \textnumero 4 по курсу \enquote{Операционные системы}
+
+        \vspace{48pt}
+
+        Освоение принципов работы с файловыми системами. 
+        
+        Обеспечение обмена данных между процессами посредством технологии <<File mapping>>.
+    \end{center}
+    
+    \vspace{125pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,А. Мохляков \\
+    Преподаватель: & Е.\,С. Миронов \\
+    Группа: & М8О-208Б-19 \\
+    Вариант: & 1 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+Составить и отладить программу на языке Си, осуществляющую работу с процессами 
+и взаимодействие между ними в одной из двух операционных систем. В результате работы 
+программа (основной процесс) должен создать для решения задачи один или несколько 
+дочерних процессов. Взаимодействие между процессами осуществляется через системные 
+сигналы/события и/или через отображаемые файлы (memory-mapped files).
+
+Необходимо обрабатывать системные ошибки, которые могут возникнуть в результате работы.
+
+Родительский процесс передает команды пользователя дочернему процессу. Дочерний процесс 
+принеобходимости передает данные в родительский процесс. Результаты своей работы дочерний
+процесс пишет в созданный им файл.
+
+Пользователь вводит команды вида: << число число число<endline> >>. Далее эти числа 
+передаются от родительского процесса в дочерний. Дочерний процесс считает их сумму и 
+выводит её в файл. Числа имеют тип int.
+
+\section{Сведения о программе}
+
+Программа написанна на Си в Unix подобной операционной системе на базе ядра Linux.
+При компиляции следует линковать библиотеки -lpthread и -lrt.
+В программе создается дочерний процесс, данные в который передаются с помощью shared memory.
+
+Дочерний прочесс принимает строку чисел и находит их сумму, ответ записывая в файл. Имя файла задается пользователем
+
+Родительский процесс считывает вводные данные у пользоветеля и пердет их дочернему процессу через отброженный участок памати shared memory.
+
+Программа завершает работу при окончании ввода, то есть нажатии CTRL+D.
+
+\section{Общий метод и алгоритм решения}
+
+Сначала в родительском процессе мы создаем shared memory object и получаем их дискрипторы. Первый файл будет 
+отвечать за сами данные, второй за их размер, а третий за mutex. Далее мы проецируем
+файлы на память, и инициазируем. Создав перед этим атрибуты для мютекса, в частности для того чтобы он работал для разных процессов.
+
+Далее мы делаем fork() и запускаем в ребенке его программу, передав как оргументы имя результирующего файла,
+и имена рбъектов shared memory. В дочернем процессе мы также открываем shared memory и проецируем их.
+
+Потом идет логика самой программы. В начале родитель блокирует mutex, считывает счисло и символ за ним, добавляя число в спроецировннй массив и увличивая счетчик его длины.
+Если символ за числом будет равен символу конца строки, то мы разблокируем mutex и ожидаем пока 
+переменная длины массива не станет равна нулю, далее блокируем muteх и повторяем цикл. При окончании ввода родитель присваивает 
+переменной длине массива значение $-1$ и разблокируем mutex.
+
+Ребенок в это время также пытается заблокировать mutex, если у него это получается до ввода родителя, то 
+он его сразу разблокирует и повторяет цикл. Если же ввод был совершен и переменная длины массива больше нуля,
+то мы считываем Size елементов в массиве и суммируем их, записывая ответ в файл, разблокируем mutex и повторяем цикл.
+В случае если длина массива данных станет $-1$, то мы выходим из цикла.
+
+Далее мы в обоих программах отключаем проекции и закрываем файлы.
+
+
+\section{Листинг программы}
+
+{\large\textbf{parent.c}}
+
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <pthread.h>
+
+#define SH_NAME "my_shared_mem"
+#define SH_SIZE_NAME "my_shared_mem_size"
+#define MUTEX_NAME "my_mutex"
+
+void wait(int *elem, int num){
+    while (*elem != num){
+    }
+}
+
+int main()
+{
+    int fd_shared_data = shm_open(SH_NAME, O_RDWR | O_CREAT, S_IRWXU);
+    int fd_shared_data_size = shm_open(SH_SIZE_NAME, O_RDWR | O_CREAT, S_IRWXU);
+    int fd_mutex = shm_open(MUTEX_NAME,O_RDWR | O_CREAT, S_IRWXU);
+
+    if(fd_shared_data == -1 || fd_shared_data_size == -1 || fd_mutex == -1){
+        printf("Error: shared memory open\n");
+        return -1;
+    }
+    if(ftruncate(fd_shared_data,getpagesize()) == -1){
+        printf("Error: ftruncate\n");
+        return -1;
+    }
+    if(ftruncate(fd_shared_data_size,sizeof(int)) == -1){
+        printf("Error: ftruncate\n");
+        return -1;
+    }
+    if(ftruncate(fd_mutex,sizeof(pthread_mutex_t*)) == -1){
+        printf("Error: ftruncate\n");
+        return -1;
+    }
+
+    int *Data = (int*) mmap(NULL,getpagesize(),PROT_READ | PROT_WRITE, MAP_SHARED, fd_shared_data, 0);
+    int *Size = (int*) mmap(NULL,sizeof(int),PROT_READ | PROT_WRITE, MAP_SHARED, fd_shared_data_size, 0);
+    pthread_mutex_t *Lock = (pthread_mutex_t*) mmap(NULL,sizeof(pthread_mutex_t*),PROT_READ | PROT_WRITE, MAP_SHARED,fd_mutex,0);
+    if (Data == MAP_FAILED || Size == MAP_FAILED || Lock  == MAP_FAILED) {
+        printf("Error: map file\n");
+        return -1;
+    }
+    pthread_mutexattr_t MutexAttribute;
+    if(pthread_mutexattr_setpshared(&MutexAttribute, PTHREAD_PROCESS_SHARED) != 0){
+        printf("Error: set shared attribute mutex\n");
+        return -1;
+    }
+    *Size = 0;
+    if(pthread_mutex_init(Lock, &MutexAttribute) != 0){
+        printf("Error: mutex init\n");
+        return -1;
+    }    
+
+    char *filename = NULL;
+    size_t sizename = 0;
+    getline(&filename,&sizename,stdin);
+    filename[strlen(filename)-1] = '\0';
+
+    int id = fork();
+
+    if(id == -1){
+        printf("Error: fork\n");
+        return -1;
+    } else if(id == 0) {
+
+        execl("./child","child",filename,SH_NAME,SH_SIZE_NAME,MUTEX_NAME,(char*) NULL);
+    } else {
+
+        int num;
+        char sym;
+        if(pthread_mutex_lock(Lock) != 0){
+            printf("Error: mutex lock\n");
+            return -1;
+        }
+        while(scanf("%d%c",&num,&sym) > 0){
+            Data[*Size] = num;
+            *Size += 1;
+            if(sym == '\n'){
+                if(pthread_mutex_unlock(Lock) != 0){
+                    printf("Error: mutex unlock\n");
+                    return -1;
+                }
+                wait(Size,0);
+                if(pthread_mutex_lock(Lock) != 0){
+                    printf("Error: mutex lock\n");
+                    return -1;
+                }
+            }
+        }
+        *Size = -1;
+        if(pthread_mutex_unlock(Lock) != 0){
+            printf("Error: mutex unlock\n");
+            return -1;
+        }
+    }
+
+    if(munmap(Data,getpagesize()) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(munmap(Size,sizeof(int)) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(munmap(Lock,sizeof(pthread_mutex_t*)) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(close(fd_shared_data) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+    if(close(fd_shared_data_size) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+    if(close(fd_mutex) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+{\large\textbf{child.c}}
+
+\begin{lstlisting}[language=C]
+#include "stdio.h"
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <pthread.h>
+
+
+int main(int argc,char **argv){
+    if(argc < 5){
+        printf("Arguments error");
+        return 1;
+    }
+    char *filename = argv[1];
+    char *sh_data_name = argv[2];
+    char *sh_data_size_name = argv[3];
+    char *mutex_name = argv[4];
+
+    int fd_shared_data = shm_open(sh_data_name, O_RDWR | O_CREAT, S_IRWXU);
+    int fd_shared_data_size = shm_open(sh_data_size_name, O_RDWR | O_CREAT, S_IRWXU);
+    int fd_mutex = shm_open(mutex_name,O_RDWR | O_CREAT, S_IRWXU);
+    if(fd_shared_data == -1 || fd_shared_data_size == -1 || fd_mutex == -1){
+        printf("Error: shared memory open\n");
+        return -1;
+    }
+    int *Data = (int*) mmap(NULL,getpagesize(),PROT_READ | PROT_WRITE, MAP_SHARED, fd_shared_data, 0);
+    int *Size = (int*) mmap(NULL,sizeof(int),PROT_READ | PROT_WRITE, MAP_SHARED, fd_shared_data_size, 0);
+    pthread_mutex_t *Lock = (pthread_mutex_t*) mmap(NULL,sizeof(pthread_mutex_t*),PROT_READ | PROT_WRITE, MAP_SHARED,fd_mutex,0);
+    if (Data == MAP_FAILED || Size == MAP_FAILED || Lock  == MAP_FAILED) {
+        printf("Error: map file\n");
+        return -1;
+    }
+    FILE *file;
+    file = fopen(filename,"w");
+    if(file == NULL){
+        printf("Error: fopen file\n");
+        return -1;
+    }
+    while ((*Size) != -1){
+        if(pthread_mutex_lock(Lock) != 0){
+            printf("Error: mutex lock\n");
+            return -1;
+        }
+        if(*Size > 0){
+            long long sum = 0;
+            for(int i = 0;i < *Size; ++i){
+                sum += Data[i];
+            }
+            *Size = 0;
+            fprintf(file,"%lld\n",sum);
+        }
+        if(pthread_mutex_unlock(Lock) != 0){
+            printf("Error: mutex unlock\n");
+            return -1;
+        }
+    }
+
+    if(fclose(file) != 0){
+        printf("Error: fclose file\n");
+        return -1;
+    }
+    if(munmap(Data,getpagesize()) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(munmap(Size,sizeof(int)) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(munmap(Lock,sizeof(pthread_mutex_t*)) != 0){
+        printf("Error: unmap file\n");
+        return -1;
+    }
+    if(close(fd_shared_data) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+    if(close(fd_shared_data_size) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+    if(close(fd_mutex) < 0){
+        printf("Error: close file\n");
+        return -1;
+    }
+    if(shm_unlink(sh_data_name) != 0){
+        printf("Error: shared memory unlink\n");
+        return -1;
+    }
+    if(shm_unlink(sh_data_size_name) != 0){
+        printf("Error: shared memory unlink\n");
+        return -1;
+    }
+    if(shm_unlink(mutex_name)!= 0){
+        printf("Error: shared memory unlink\n");
+        return -1;
+    }
+    return 0;
+}
+\end{lstlisting}
+
+\section{Демонстрация работы программы}
+
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB4$ make
+gcc -c -Wall parent.c
+gcc parent.o -pthread -lrt -o parent
+gcc -c -Wall child.c
+gcc child.o -pthread -lrt -o child
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB4$ ./parent
+test
+1 2 3 4 5
+0 0 0
+12 45 34 54
+42 -5
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB4$ cat test
+15
+0
+145
+37
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB4$ strace -f -e trace=
+"%process,read,write,dup2,mmap" -o log.txt ./parent
+test2
+1 2 3
+0 0
+2 -1
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB4$ cat log.txt
+679   execve("./parent", ["./parent"], 0x7fffe2329438 /* 29 vars */) = 0
+679   arch_prctl(0x3001 /* ARCH_??? */, 0x7ffe9622c3c0) = -1 
+EINVAL (Invalid argument)
+679   mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f8283ee3000
+679   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0 7\textbackslash0
+\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+679   mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE
+|MAP_ANONYMOUS, -1, 0) = 0x7f8283ee1000
+679   mmap(NULL, 44000, PROT_READ, MAP_PRIVATE|
+MAP_DENYWRITE, 3, 0) = 0x7f8283ed6000
+679   mmap(0x7f8283ed9000, 16384, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED
+|MAP_DENYWRITE, 3, 0x3000) = 0x7f8283ed9000
+679   mmap(0x7f8283edd000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x7000) = 0x7f8283edd000
+679   mmap(0x7f8283edf000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x8000) = 0x7f8283edf000
+679   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash220
+\textbackslash201\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+679   mmap(NULL, 140408, PROT_READ, MAP_PRIVATE|
+MAP_DENYWRITE, 3, 0) = 0x7f8283eb3000
+679   mmap(0x7f8283eba000, 69632, PROT_READ|PROT_EXEC, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x7000) = 0x7f8283eba000
+679   mmap(0x7f8283ecb000, 20480, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x18000) = 0x7f8283ecb000
+679   mmap(0x7f8283ed0000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x1c000) = 0x7f8283ed0000
+679   mmap(0x7f8283ed2000, 13432, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f8283ed2000
+679   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash3\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash360q
+\textbackslash2\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+679   mmap(NULL, 2036952, PROT_READ, MAP_PRIVATE|
+MAP_DENYWRITE, 3, 0) = 0x7f8283cc1000
+679   mmap(0x7f8283ce6000, 1540096, PROT_READ|PROT_EXEC, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7f8283ce6000
+679   mmap(0x7f8283e5e000, 303104, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x19d000) = 0x7f8283e5e000
+679   mmap(0x7f8283ea9000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f8283ea9000
+679   mmap(0x7f8283eaf000, 13528, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f8283eaf000
+679   mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_ANONYMOUS, -1, 0) = 0x7f8283cbe000
+679   arch_prctl(ARCH_SET_FS, 0x7f8283cbe740) = 0
+679   mmap(NULL, 4096, PROT_READ|PROT_WRITE, 
+MAP_SHARED, 3, 0) = 0x7f8283f1b000
+679   mmap(NULL, 4, PROT_READ|PROT_WRITE, MAP_SHARED, 4, 0) = 0x7f8283eee000
+679   mmap(NULL, 8, PROT_READ|PROT_WRITE, MAP_SHARED, 5, 0) = 0x7f8283eed000
+679   read(0, "test2\textbackslash{n}", 1024)          = 6
+679   clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|
+CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f8283cbea10) = 680
+679   read(0,  <unfinished ...>
+680   execve("./child", ["child", "test2", "my_shared_mem",
+"my_shared_mem_size","my_mutex"], 0x7ffe9622c4a8 /* 29 vars */) = 0
+680   arch_prctl(0x3001 /* ARCH_??? */, 0x7ffc20777f70) = -1 
+EINVAL (Invalid argument)
+680   mmap(NULL, 45372, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fa203107000
+680   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0 7\textbackslash0
+\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+680   mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_ANONYMOUS, -1, 0) = 0x7fa203105000
+680   mmap(NULL, 44000, PROT_READ, MAP_PRIVATE|
+MAP_DENYWRITE, 3, 0) = 0x7fa2030fa000
+680   mmap(0x7fa2030fd000, 16384, PROT_READ|PROT_EXEC, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x3000) = 0x7fa2030fd000
+680   mmap(0x7fa203101000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x7000) = 0x7fa203101000
+680   mmap(0x7fa203103000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x8000) = 0x7fa203103000
+680   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash220
+\textbackslash201\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+680   mmap(NULL, 140408, PROT_READ, MAP_PRIVATE|
+MAP_DENYWRITE, 3, 0) = 0x7fa2030d7000
+680   mmap(0x7fa2030de000, 69632, PROT_READ|PROT_EXEC, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x7000) = 0x7fa2030de000
+680   mmap(0x7fa2030ef000, 20480, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x18000) = 0x7fa2030ef000
+680   mmap(0x7fa2030f4000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x1c000) = 0x7fa2030f4000
+680   mmap(0x7fa2030f6000, 13432, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fa2030f6000
+680   read(3, "\textbackslash177ELF\textbackslash2\textbackslash1\textbackslash1\textbackslash3\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash3\textbackslash0>\textbackslash0\textbackslash1\textbackslash0\textbackslash0\textbackslash0\textbackslash360q
+\textbackslash2\textbackslash0\textbackslash0\textbackslash0\textbackslash0\textbackslash0"..., 832) = 832
+680   mmap(NULL, 2036952, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0)
+ = 0x7fa202ee5000
+680   mmap(0x7fa202f0a000, 1540096, PROT_READ|PROT_EXEC, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7fa202f0a000
+680   mmap(0x7fa203082000, 303104, PROT_READ, MAP_PRIVATE|MAP_FIXED|
+MAP_DENYWRITE, 3, 0x19d000) = 0x7fa203082000
+680   mmap(0x7fa2030cd000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7fa2030cd000
+680   mmap(0x7fa2030d3000, 13528, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fa2030d3000
+680   mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|
+MAP_ANONYMOUS, -1, 0) = 0x7fa202ee2000
+680   arch_prctl(ARCH_SET_FS, 0x7fa202ee2740) = 0
+680   mmap(NULL, 4096, PROT_READ|PROT_WRITE, 
+MAP_SHARED, 3, 0) = 0x7fa20313f000
+680   mmap(NULL, 4, PROT_READ|PROT_WRITE, MAP_SHARED, 4, 0) = 0x7fa203112000
+680   mmap(NULL, 8, PROT_READ|PROT_WRITE, MAP_SHARED, 5, 0) = 0x7fa203111000
+679   <... read resumed>"1 2 3\textbackslash{n}", 1024) = 6
+679   read(0, "0 0\textbackslash{n}", 1024)            = 4
+679   read(0, "2 -1\textbackslash{n}", 1024)           = 5
+679   read(0, "", 1024)                 = 0
+680   write(6, "6\textbackslash{n}0\textbackslash{n}1\textbackslash{n}", 6)          = 6
+679   exit_group(0)                     = ?
+679   +++ exited with 0 +++
+680   exit_group(0)                     = ?
+680   +++ exited with 0 +++
+\end{alltt}
+
+\pagebreak
+
+\section{Вывод}
+
+Взаимодействие между процессами можно организовать при помощи каналов, сокетов и отображаемых
+файлов. В данной лабораторной работе был изучен и применен механизм межпроцессорного взаимодействия 
+\--- file mapping. Файл отображается на оперативную память таким образом, что мы можем взаимодействовать
+с ним как с массивом.
+
+Благодаря этому вместо медленных запросов на чтение и запись мы выполняем отображение файла в
+ОЗУ и получаем произвольный доступ за O(1). Из-за этого при использовании этой технологии межпроцессорного
+взаимодействия мы можем получить ускорении работы программы, в сравнении, с использованием каналов.
+
+Из недостатков данного метода можно выделить то, что дочерние процессы обязательно должны знать
+имя отображаемого файла и также самостоятельно выполнить отображение.
+\end{document}
+
+

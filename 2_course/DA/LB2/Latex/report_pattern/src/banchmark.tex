@@ -1,0 +1,53 @@
+\section{Тест производительности}
+Сравнение производительности будет производится со стандартным красно-черным деревом, представленным в стандартной библиотеке шаблонов С++ контейнером map. Сравниватьбудем скорость добавления, удаления и нахождения ключа в дерево.
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{3cm}|p{3cm}|}
+    \hline
+    \rowcolor{lightgray}
+     &Количество вставок&Количество удалений&Количество поисков\\
+    \hline
+    test1.txt&3219&3195&3238\\
+    \hline
+    test2.txt&32170&32001&32363\\
+    \hline
+    test3.txt&321667&320960&322447\\
+    \hline
+\end{longtable}
+\begin{alltt}
+    pavel@DESKTOP-VBSMFB3:~/solution$ make
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution <test1.txt
+    Insert:
+    Map: 8 ms
+    My_RB: 9 ms
+    Delete:
+    Map: 8 ms
+    My_RB: 9 ms
+    Find:
+    Map: 8 ms
+    My_RB: 8 ms
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution <test2.txt
+    Insert:
+    Map: 73 ms
+    My_RB: 75 ms
+    Delete:
+    Map: 70 ms
+    My_RB: 77 ms
+    Find:
+    Map: 72 ms
+    My_RB: 73 ms
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution <test3.txt
+    Insert:
+    Map: 490 ms
+    My_RB: 506 ms
+    Delete:
+    Map: 485 ms
+    My_RB: 493 ms
+    Find:
+    Map: 480 ms
+    My_RB: 483 ms
+\end{alltt}
+
+Так как и мое дерево, и дерево из стандартной библиотеки шаблонов красночерное, то время получилось примерно одинаковым. Сложноть операций добавления и удаления - $O(lg(n))$
+
+\pagebreak
+

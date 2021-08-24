@@ -1,0 +1,71 @@
+2452  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360q\2\0\0\0\0\0"..., 832) = 832
+2452  pipe([3, 4])                      = 0
+2452  read(0, "test2\n", 1024)          = 6
+2452  read(0,  <unfinished ...>
+2454  dup2(3, 0)                        = 0
+2454  read(4, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360q\2\0\0\0\0\0"..., 832) = 832
+2454  read(0,  <unfinished ...>
+2452  <... read resumed>"1 2 3\n", 1024) = 6
+2452  write(4, "1", 1)                  = 1
+2454  <... read resumed>"1", 4096)      = 1
+2452  write(4, " ", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>" ", 4096)      = 1
+2452  write(4, "2", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"2", 4096)      = 1
+2452  write(4, " ", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>" ", 4096)      = 1
+2452  write(4, "3", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"3", 4096)      = 1
+2452  write(4, "\n", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"\n", 4096)     = 1
+2452  read(0,  <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... read resumed>"0 0\n", 1024)  = 4
+2452  write(4, "0", 1)                  = 1
+2454  <... read resumed>"0", 4096)      = 1
+2452  write(4, " ", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>" ", 4096)      = 1
+2452  write(4, "0", 1)                  = 1
+2454  read(0,  <unfinished ...>
+2452  write(4, "\n", 1)                 = 1
+2454  <... read resumed>"0\n", 4096)    = 2
+2452  read(0,  <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... read resumed>"2 -1\n", 1024) = 5
+2452  write(4, "2", 1)                  = 1
+2454  <... read resumed>"2", 4096)      = 1
+2452  write(4, " ", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>" ", 4096)      = 1
+2452  write(4, "-", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"-", 4096)      = 1
+2452  write(4, "1", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"1", 4096)      = 1
+2452  write(4, "\n", 1 <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... write resumed>)              = 1
+2454  <... read resumed>"\n", 4096)     = 1
+2452  read(0,  <unfinished ...>
+2454  read(0,  <unfinished ...>
+2452  <... read resumed>"", 1024)       = 0
+2454  <... read resumed>"", 4096)       = 0
+2454  write(4, "6\n0\n1\n", 6)          = 6
+2452  +++ exited with 0 +++
+2454  +++ exited with 0 +++

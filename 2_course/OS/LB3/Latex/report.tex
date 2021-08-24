@@ -1,0 +1,602 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Лабораторная работа \textnumero 3 по курсу \enquote{Операционные системы}
+
+        \vspace{48pt}
+
+        Управление потоками в ОС. Обеспечение синхронизации между потоками
+    \end{center}
+    
+    \vspace{140pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,А. Мохляков \\
+    Преподаватель: & Е. \,С. Миронов \\
+    Группа: & М8О-208Б-19 \\
+    Вариант: & 1 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+Составить программу на языке Си, обрабатывающую данные в многопоточном
+режиме. При обработки использовать стандартные средства создания потоков
+операционной системы (Windows/Unix). Ограничение потоков должно быть задано 
+ключом запуска вашей программы.
+
+Так же необходимо уметь продемонстрировать количество потоков, используемое 
+вашей программой с помощью стандартных средств операционной системы.
+
+В отчете привести исследование зависимости ускорения и эффективности 
+алгоритма от входящих данных и количества потоков. Получившиеся результаты 
+необходимо объяснить.
+
+Отсортировать массив целых чисел при помощи битонической сортировки.
+
+\section{Сведения о программе}
+
+Программа написанна на Си в Unix подобной операционной системе на базе ядра Linux.
+Для компиляции требуется ключ -lpthread, для запуска программы нелбходимо указать
+в качестве аргумента количество потоков, которые максимально могут быть использованы.
+
+Программа сортирует массив с помощью битонной сортировки.
+Сначала пользователь должен ввести колличество элементов массива.
+Далее должен передать все элементы.
+
+Существует три глобальных переменных, которые являются мьютексом и 2 переменнами колличества потоков,
+используемые и максимальные. Их использование между потоками регулируется мьютексом.
+Сортируемый массив передается как указатель. И для него не нужен мьютекс, так как 
+каждый поток работает на своем участке, не перекрываемом другими.
+
+\section{Общий метод и алгоритм решения}
+
+Параментром запуска программы мы указваем максимальное количество использумых потоков.
+
+Далее мы указываем длину массива, и создаем массив дополив длину до ближайшего числа $2^n$.
+Так как это необходимо для работы алгоритма сортировки. Далее мы считываем 
+данные, а оставшийся участок массива заполняем максимально возможными элементами,
+чтобы после сортировки они оказалить в конце массива, и мы могли также легко их удалить.
+
+Далее вызывается функция сортировки. Сначала мы рекурсивно разбиваем 
+массив по полам, задавая целевое направление сначала вниз, а потом вверх, чтобы получить
+битонную последовательность. При этом пока у нас есть свободные потоки мы выдиляем под вторую
+половину отдельный поток, а когда они закончатся начинаем работать в однопотоке, на выделенном участке.
+
+Когда мы достигаем массива из одного элемента его можно считать отсортированным, как по возрастанию так
+и по убыванию. Поэтому два соседних элемента можно считать битонной последовательностью, которую можно собрать в одну
+возрастающую или убывающую.
+
+Начинаем объядинять битонные последовательности. Находим расстояние между двумя
+элиментами, которые будем сравнивать, оно равно половине участка массива.
+Далее мы проходим по половине участка и сравниваем каждый элемент с элементом через заданное расстояние.
+При необходимости меняем их местами. Далее разбиваем данный участок на 2 и повторяем слияние, и так пока его длина не станет равна 1.
+
+Таким образом мы получаем битоническую последовательность большего размера, к которой можно опять применить слияние.
+Повторяем эту процедуру до оканчания сортироки. При этом когда мы будем делать слияние для 2 участков, созданных
+разными потоками, слияние мы опять разбиваем на несколько потоков, пока это возможно.
+
+При всем этом если один поток подготовил последовательность, а второй еще нет, то первый его ждет, из чего
+следует вывод, что увеличение производительности будет только при увеличении количества потоков
+до следующей степени двойки.
+
+\section{Листинг программы}
+
+{\large\textbf{main.c}}
+
+\begin{lstlisting}[language=C]
+#include "stdio.h"
+#include "stdlib.h"
+#include "bitonic.h"
+#include <sys/time.h>
+
+#define MAXINT 2147483647
+
+int SizeStep(int Num){
+    int i = 1;
+    while(i < Num)
+        i *= 2;
+    return i;
+}
+
+
+int main(int argc, char *argv[]){
+    int threads = 1;
+
+    if(argc == 2){
+        threads = atoi(argv[1]);
+    }
+
+    int input_size;
+    scanf("%d",&input_size);
+
+    int size_array = SizeStep(input_size); 
+    int *array = malloc(sizeof(int)*size_array);
+    
+    for(int i = 0; i < input_size; ++i)
+        scanf("%d",array+i);
+    for(int i = input_size; i < size_array; ++i)
+        array[i] = MAXINT;
+
+    #ifdef time
+    struct timeval startwtime, endwtime;
+    gettimeofday(&startwtime, NULL);
+    #endif
+
+    bitonicsort(array, size_array, threads);
+
+    #ifdef time
+    gettimeofday(&endwtime, NULL);
+    double time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6 + endwtime.tv_sec - startwtime.tv_sec);
+    printf("%f\n", time);
+    #endif
+
+
+    #ifndef time
+    for(int i=0;i<input_size;++i){
+        printf("%d\n",array[i]);
+    }
+    #endif
+
+    free(array);
+    return 0;
+}
+\end{lstlisting}
+
+{\large\textbf{bitonuc.h}}
+
+\begin{lstlisting}[language=C]
+#pragma once
+
+#include "pthread.h"
+
+#define UP 1
+#define DOWN 0
+
+typedef struct ArgsBitonic{
+    int *array;
+    int size;
+    int start;
+    int dir;
+}ArgsBitonic;
+
+void InitArgs(ArgsBitonic *args, int *array, int size, int start, int dir);
+void Comparator(int *array, int i, int j, int dir);
+void BitonicMergeSinglThread(ArgsBitonic *args);
+void BitonicSortSinglThread(ArgsBitonic *args);
+void BitonicMergeMultiThreads(ArgsBitonic *args);
+void BitonicSortMultiThreads(ArgsBitonic *args);
+void bitonicsort(int *array, int size, int threads);
+\end{lstlisting}
+
+{\large\textbf{bitonuc.c}}
+
+\begin{lstlisting}[language=C]
+#include "pthread.h"
+#include "bitonic.h"
+#include "stdio.h"
+
+#define UP 1
+#define DOWN 0
+
+pthread_mutex_t lock;
+size_t max_threads = 1;
+size_t use_threads = 1;
+
+void InitArgs(ArgsBitonic *args, int *array, int size, int start, int dir){
+    args->array = array;
+    args->size  = size;
+    args->start = start;
+    args->dir   = dir;
+}
+
+
+void Comparator(int *array, int i, int j, int dir){
+    if(dir == (array[i] > array[j])){
+        int temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+void BitonicMergeSinglThread(ArgsBitonic *args){
+    if(args->size > 1){
+        int nextsize = args->size / 2;
+        for(int i = args->start; i < nextsize + args->start; ++i){
+                Comparator(args->array, i, i + nextsize, args->dir);
+        }
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, args->dir);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, args->dir);
+        
+        BitonicMergeSinglThread(&args1);
+        BitonicMergeSinglThread(&args2);
+    }
+}
+
+void BitonicSortSinglThread(ArgsBitonic *args){
+    if(args->size > 1){
+        int nextsize = args->size / 2;
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, DOWN);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, UP);
+
+        BitonicSortSinglThread(&args1);
+        BitonicSortSinglThread(&args2);
+        BitonicMergeSinglThread(args);
+    }
+}
+
+void BitonicMergeMultiThreads(ArgsBitonic *args){
+    if(args->size > 1){        
+        int nextsize = args->size / 2;
+        int isParal = 0;
+        pthread_t tid;
+
+        for(int i = args->start; i < nextsize + args->start; ++i){
+                Comparator(args->array, i, i + nextsize, args->dir);
+        }
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, args->dir);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, args->dir);
+
+        pthread_mutex_lock(&lock);
+        if(use_threads < max_threads){ 
+            ++use_threads;
+            pthread_mutex_unlock(&lock);
+            isParal = 1;
+            pthread_create(&tid, NULL,(void*) &BitonicMergeMultiThreads, &args1);
+            BitonicMergeMultiThreads(&args2);
+        } else {
+            pthread_mutex_unlock(&lock);
+            BitonicMergeSinglThread(&args1);
+            BitonicMergeSinglThread(&args2);
+        }
+
+        if(isParal){
+            pthread_join(tid, NULL);
+            pthread_mutex_lock(&lock);
+            --use_threads;
+            pthread_mutex_unlock(&lock);
+        }
+    }
+}
+    
+void BitonicSortMultiThreads(ArgsBitonic *args){
+    if(args->size > 1 ){
+        int nextsize = args->size / 2;
+        int isParal = 0;
+        pthread_t tid;
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, DOWN);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, UP);
+
+        pthread_mutex_lock(&lock);
+        if(use_threads < max_threads){
+            ++use_threads;
+            pthread_mutex_unlock(&lock);
+            isParal = 1;
+            pthread_create(&tid, NULL,(void*) &BitonicSortMultiThreads, &args1);
+            BitonicSortMultiThreads(&args2);
+        } else {
+            pthread_mutex_unlock(&lock);
+            BitonicSortSinglThread(&args1);
+            BitonicSortSinglThread(&args2);
+        }
+
+        if(isParal){
+            pthread_join(tid, NULL);
+            pthread_mutex_lock(&lock);
+            --use_threads;
+            pthread_mutex_unlock(&lock);
+        }
+        BitonicMergeMultiThreads(args);
+    }
+}
+
+void bitonicsort(int *array, int size, int threads){
+    pthread_mutex_init(&lock, NULL);
+
+    ArgsBitonic args;
+    InitArgs(&args,array,size,0,UP);
+
+    if(threads > 1)
+        max_threads = threads;
+
+    BitonicSortMultiThreads(&args);
+    
+    pthread_mutex_destroy(&lock);
+}
+\end{lstlisting}
+
+\section{Демонстрация работы программы}
+
+\begin{alltt}
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ make clean
+rm -r *.o main
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ make
+gcc -c -Wall src/main.c
+gcc -c -Wall src/bitonic.c
+gcc main.o bitonic.o -pthread -o main
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ ./main 1
+5
+5 4 3 2 1
+1
+2
+3
+4
+5
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ ./main 2
+8
+23 54 2 -12 6 2 13423354 -1231
+-1231
+-12
+2
+2
+6
+23
+54
+13423354
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ ./main 4
+4
+2 5 0 -10
+-10
+0
+2
+5
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 1
+28.916599
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 2
+15.838372
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 3
+15.663935
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 4
+9.641949
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 5
+9.792694
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 6
+10.508794
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 7
+10.540718
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat test | ./main 8
+11.463141
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ strace -f -e 
+trace="%process,write" -o log.txt ./main 4
+8
+23 55 -36 7 0 254 -454 3
+-454
+-36
+0
+3
+7
+23
+55
+254
+pavel@DESKTOP-K5KMLPV:~/Project/mai/2_course/OS/LB3$ cat log.txt
+1273  execve("./main", ["./main", "4"], 0x7ffda4153150 /* 29 vars */) = 0
+1273  arch_prctl(0x3001 /* ARCH_??? */, 0x7ffc25e05a30) = -1 EINVAL 
+(Invalid argument)
+1273  arch_prctl(ARCH_SET_FS, 0x7f2ea1d04740) = 0
+1273  clone(child_stack=0x7f2ea1d02fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS
+|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1274],
+tls=0x7f2ea1d03700, child_tidptr=0x7f2ea1d039d0) = 1274
+1273  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1275], 
+tls=0x7f2ea1502700, child_tidptr=0x7f2ea15029d0) = 1275
+1275  exit(0)                           = ?
+1274  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1275  +++ exited with 0 +++
+1273  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1274  <... clone resumed>, parent_tid=[1276], tls=0x7f2ea0d01700, 
+child_tidptr=0x7f2ea0d019d0) = 1276
+1273  <... clone resumed>, parent_tid=[1277], tls=0x7f2ea1502700, 
+child_tidptr=0x7f2ea15029d0) = 1277
+1277  exit(0)                           = ?
+1277  +++ exited with 0 +++
+1276  exit(0)                           = ?
+1276  +++ exited with 0 +++
+1274  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1278], 
+tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1278
+1274  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1278  exit(0 <unfinished ...>
+1274  <... clone resumed>, parent_tid=[1279], tls=0x7f2ea1502700, 
+child_tidptr=0x7f2ea15029d0) = 1279
+1278  <... exit resumed>)               = ?
+1278  +++ exited with 0 +++
+1279  exit(0)                           = ?
+1279  +++ exited with 0 +++
+1274  exit(0)                           = ?
+1274  +++ exited with 0 +++
+1273  clone(child_stack=0x7f2ea1d02fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1280], 
+tls=0x7f2ea1d03700, child_tidptr=0x7f2ea1d039d0) = 1280
+1273  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1280  clone(child_stack=0x7f2ea1501fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID <unfinished ...>
+1273  <... clone resumed>, parent_tid=[1281], tls=0x7f2ea0d01700, 
+child_tidptr=0x7f2ea0d019d0) = 1281
+1280  <... clone resumed>, parent_tid=[1282], tls=0x7f2ea1502700, 
+child_tidptr=0x7f2ea15029d0) = 1282
+1281  exit(0)                           = ?
+1281  +++ exited with 0 +++
+1282  clone(child_stack=0x7f2ea0d00fb0, flags=CLONE_VM|CLONE_FS|
+CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|
+CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tid=[1283], 
+tls=0x7f2ea0d01700, child_tidptr=0x7f2ea0d019d0) = 1283
+1283  exit(0)                           = ?
+1283  +++ exited with 0 +++
+1282  exit(0)                           = ?
+1282  +++ exited with 0 +++
+1280  exit(0)                           = ?
+1280  +++ exited with 0 +++
+1273  write(1, "-454\textbackslash{n}", 5)             = 5
+1273  write(1, "-36\textbackslash{n}", 4)              = 4
+1273  write(1, "0\textbackslash{n}", 2)                = 2
+1273  write(1, "3\textbackslash{n}", 2)                = 2
+1273  write(1, "7\textbackslash{n}", 2)                = 2
+1273  write(1, "23\textbackslash{n}", 3)               = 3
+1273  write(1, "55\textbackslash{n}", 3)               = 3
+1273  write(1, "254\textbackslash{n}", 4)              = 4
+1273  exit_group(0)                     = ?
+1273  +++ exited with 0 +++
+\end{alltt}
+
+\pagebreak
+
+\section{Исследование ускорения и эффективности}
+
+Для исследования производительности будем использовать несколько тестов:
+на 100000, 1000000, 10000000
+
+Таблица 1. Исследование на 100000 элементах.
+
+\begin{tabular}{|p{35mm}|p{35mm}|p{35mm}|p{35mm}|}
+    \hline
+    {Количество \newline потоков(n)} &Время работы&{Ускорение \newline $(S_n=T_1/T_n)$}&Эффективность $(X_n=S_n/n)$\\
+    \hline
+    1&0.137688&-&-\\
+    \hline
+    2&0.070220&1.96&0.98\\
+    \hline
+    3&0.074930&1.83&0.61\\
+    \hline
+    4&0.054423&2.53&0.63\\
+    \hline
+    5&0.043279&3.18&0.63\\
+    \hline
+    6&0.051713&2.66&0.44\\
+    \hline
+    7&0.045668&3.01&0.43\\
+    \hline
+    8&0.043089&3.19&0.39\\
+    \hline
+\end{tabular}
+
+Таблица 2. Исследование на 1000000 элементах.
+
+\begin{tabular}{|p{35mm}|p{35mm}|p{35mm}|p{35mm}|}
+    \hline
+    {Количество \newline потоков(n)} &Время работы&{Ускорение \newline $(S_n=T_1/T_n)$}&Эффективность $(X_n=S_n/n)$\\
+    \hline
+    1&1.516532&-&-\\
+    \hline
+    2&0.950804&1.59&0.79\\
+    \hline
+    3&0.804578&1.88&0.63\\
+    \hline
+    4&0.562645&2.69&0.67\\
+    \hline
+    5&0.519941&2.92&0.58\\
+    \hline
+    6&0.615402&2.46&0.41\\
+    \hline
+    7&0.623988&2.43&0.35\\
+    \hline
+    8&0.645662&2.35&0.29\\
+    \hline
+\end{tabular}
+
+Таблица 3. Исследование на 10000000 элементах.
+
+\begin{tabular}{|p{35mm}|p{35mm}|p{35mm}|p{35mm}|}
+    \hline
+    {Количество \newline потоков(n)} &Время работы&{Ускорение \newline $(S_n=T_1/T_n)$}&Эффективность $(X_n=S_n/n)$\\
+    \hline
+    1&32.312667&-&-\\
+    \hline
+    2&17.034210&1.89&0.95\\
+    \hline
+    3&17.034277&1.89&0.63\\
+    \hline
+    4&10.538664&3.07&0.76\\
+    \hline
+    5&11.227089&2.88&0.57\\
+    \hline
+    6&11.185609&2.89&0.48\\
+    \hline
+    7&11.993463&2.69&0.38\\
+    \hline
+    8&10.383236&3.11&0.39\\
+    \hline
+\end{tabular}
+
+\pagebreak
+
+\section{Вывод}
+
+Многие языки программирования позволяют пользователю работать с потоками. 
+Создание потоков происходит быстрее, чем создание процессов, за счет того, что
+при создании потока не копируется область памяти, а они все работают с одной
+областью памяти. Поэтому многопоточность используют для ускарения не зависящих
+друг от друга, однотипнях задач, которые будут работать параллельно.
+
+Язык Си предоставляет данный функционал пользователям Unix-подобных операционных
+систем с помощью библиотеки pthread.h. Средствами языка Си можно совершать системные
+запросы на создание и ожидания завершения потока, а также использовать различные
+примитивы синхронизации.
+
+В данной лабораторной работе был реализован и исследован алгоритм битонной сортировки.
+Установив при этом, что используя 4 потока можно молучить выигрыш по времени
+в 2,5-3 раза. При дальнейшем увеличении потоков прирост почти не увеличиватся, а
+даже может уменьшаться из-за того, что на управление и переключение потоков 
+уходит больше времени, чем они выигрывают.
+\end{document}
+
+

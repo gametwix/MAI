@@ -1,0 +1,12 @@
+*.dvi
+*.toc
+*.log
+*.aux
+_minted-main
+*.o
+*.t
+*.ts
+*.test
+*.fls
+*.fdb_latexmk
+*.out

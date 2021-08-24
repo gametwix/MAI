@@ -1,0 +1,30 @@
+\section{Тест производительности}
+Сравнение производительности будет производится с std::find, представленным в стандартной библиотеке шаблонов С++. 
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{3cm}|p{3cm}|}
+    \hline
+    \rowcolor{lightgray}
+     &Длина паттерна&Количество строк&Количество слов в строке\\
+    \hline
+    test1.txt&10&10&100\\
+    \hline
+    test2.txt&1000&10000&100\\
+    \hline
+    test3.txt&10 где джокеры и сиволы через один&10000&10\\
+    \hline
+\end{longtable}
+\begin{alltt}
+    pavel@DESKTOP-VBSMFB3:~/solution$ make
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution < test1.txt
+    Aho-AhoKorasik: 1ms
+    std::find: 1ms
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution < test2.txt
+    Aho-AhoKorasik: 5ms
+    std::find: 12ms
+    pavel@DESKTOP-VBSMFB3:~/solution$ ./solution < test3.txt
+    Aho-AhoKorasik: 7
+    std::find: 11
+\end{alltt}
+
+\pagebreak
+

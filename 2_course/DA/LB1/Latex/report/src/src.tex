@@ -1,0 +1,267 @@
+\section{Описание}
+Строки фиксированной длины 64 символа, во входных данных могут встретиться строки меньшей длины, при этом строка дополняется до 64-х нулевыми символами, которые не выводятся на экран.
+
+\pagebreak
+
+\section{Исходный код}
+Для начала напишем шаблонный класс вектора, полями вектора являются динамический массив, количество занятых ячеек и общее количество ячеек. При добавлении нового элимента в конец массива мы проверярем, есть ли в массиве еще место, если его нет, то увеличивает массив в 2 раза.
+
+
+Для описания элементов массива я создал класс, хранящий в себе пару автомабольный номер и строка. И описал для него операцию присваевания и сравнения. Операция сравнения необходима для сравнения скорости моей сортировки и стандартной сортировки слиянием.
+
+
+Далее мы считываем все данные которые нам доступны из потока, и помещаем их в вектор.
+
+
+Сортировка разбита на 2 функции. Первая сортирует элементы вектора по возврастанию буквы в алфавитном порядке, вторая по возврастанию чисел от нуля до тысячи. Для ускорения работы программы и сокращения количество копирований мы создаем копию вектора той же длины, что и исходный, в который будет складываться ответ. После чего для следующей функции уже второй вектор будет исходным, а в первый будет складываться ответ. Таким образом мы их меняем местами нужное количество раз.
+
+
+Сами сортировки являются сортировками подсчета. То есть мы создаем массим состоящий из количества элиментов в разряде. После чего считаем сколько раз на встетился тот, или иной элимент. Потом мы прибавляем к каждому элименту этого массива сумму всех предидущих элиментов, тем самым получая положения последнего элемента вектора для каждого значения разряда. Далее мы с конца проходим начальный вектор и копируем значения его элимента в ячейку второго вектора, номер которой задан в массиве. После добавления элимента мы уменьшаем на 1 значение в этой ячейке массива.
+
+\pagebreak
+
+\begin{lstlisting}[language=C]
+#ifndef VECTOR
+#define VECTOR
+
+#include <cstring>
+#include <cstddef>
+#include <iostream>
+
+namespace NVector
+{
+    int min(int a,int b);
+    
+    
+    template <typename T>
+    class TVector
+    {
+        protected:
+        T *Data;
+        size_t Size_data;
+        size_t Size_malloc;
+
+        void Resize(size_t newsize);
+        
+        void Copy(T*& data1, T*& data2, size_t begin, size_t end);
+    
+        void Clear();
+        
+        public:
+
+        TVector();
+
+        ~TVector();
+
+        const int Size();
+
+        int Size();
+
+        void Renew(size_t new_size);
+
+        T* Begin();
+
+        T* End();
+
+        void Push_back(const T& item);
+
+        T& operator[](size_t itr);
+
+        const T &operator[](size_t itr);
+
+        void operator=(const TVector<T> &second); 
+
+    }; //class TVector
+
+} //namespace NVector
+
+#endif
+
+#ifndef SORTBASE
+#define SORTBASE
+
+#include "vector.hpp"
+#include "base.hpp"
+
+namespace NSort_base
+{
+    const void Sort_ch( NVector::TVector<NBase::TBase_elem>  &base,NVector::TVector<NBase::TBase_elem> &newbase, int num)
+    {
+        int k[26] = {};
+        //newbase.Renew(base.Size());
+        int size = base.Size();
+        for(int i = 0;i < size;++i)
+        {
+            int l = (int)base[i].Carnum.Sym[num]-65;
+            ++k[l];
+        }
+        for(int i=1;i<26;++i)
+        {
+            k[i]+=k[i-1];
+        }
+        for(int i = size - 1;i >= 0;--i)
+        {
+            int l = (int)base[i].Carnum.Sym[num]-65;
+            newbase[k[l]-1] = base[i];
+            --k[l];
+        }
+
+    }
+
+
+    void Sort_int(const NVector::TVector<NBase::TBase_elem> &base,NVector::TVector<NBase::TBase_elem> &newbase)
+    {
+        int k[1000] = {};
+        //newbase.Renew(base.Size());
+        int size = base.Size();
+        for(int i = 0;i < size;++i)
+        {
+            int l = base[i].Carnum.Num;
+            ++k[l];
+        }
+        for(int i=1;i<1000;++i)
+        {
+            k[i]+=k[i-1];
+        }
+        for(int i = size - 1;i >= 0;--i)
+        {
+            int l = base[i].Carnum.Num;
+            newbase[k[l]-1] = base[i];
+            --k[l];
+        }
+    }
+
+    void Sort(NVector::TVector<NBase::TBase_elem> &base1)
+    {
+        NVector::TVector<NBase::TBase_elem> base2;
+        base2.Renew(base1.Size());
+        Sort_ch(base1,base2,2);
+        Sort_ch(base2,base1,1);
+        Sort_int(base1,base2);
+        Sort_ch(base2,base1,0);
+    }
+
+} // namespace NSort_base
+
+#endif
+
+#ifndef BASE
+#define BASE
+
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+
+namespace NCarnum
+{
+    class TCarnum
+    {
+        public:
+        int Num = 0;
+        char Sym[3]={'A','A','A'};
+
+        void operator=(const TCarnum &second_elem);
+
+        friend std::istream& operator>>(std::istream &in, TCarnum &carnum);
+
+        friend std::ostream& operator<< (std::ostream &out, const TCarnum &carnum);
+
+        bool operator<(const TCarnum &b);
+        
+    }; // class TCarnum
+
+} // namespace NCarnum
+
+
+namespace NBase
+{
+    class TBase_elem
+    {
+        public:
+        NCarnum::TCarnum Carnum;
+        char Str[65] = "";
+
+        void operator=(const TBase_elem &second_elem);
+
+        friend std::istream& operator>>(std::istream &in, TBase_elem &elem);
+
+        friend std::ostream& operator<< (std::ostream &out, const TBase_elem &elem);
+
+        bool operator< (const TBase_elem &b);
+    }; // class TCarnum
+} // namespace NCarnum
+
+#endif
+\end{lstlisting}
+
+\pagebreak
+
+\begin{longtable}{|p{7.5cm}|p{7.5cm}|}
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {main.cpp}\\
+\hline
+int main()&Считывает данные в вектор, сортирует и выводит\\
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {vector.hpp}\\
+\hline
+void Resize(size\_t newsize)&Меняет размер массива с данными\\
+\hline
+void Copy(T*\& data1, T*\& data2, size\_t begin, size\_t end)&Копирует данные из одного массива в другой\\
+\hline
+void Clear()&Очищает массив\\
+\hline
+int Size()&Возвращает размер массива\\
+\hline
+void Renew(size\_t new\_size)&Изменяет размер массива и записывает этот размер в поля\\
+\hline
+T* Begin()&Возвращает указатель на первый элимент массива\\
+\hline
+T* End()&Возвращает указатель на элимент массива после последнего\\
+\hline
+void Push\_back(const T\& item)&Добавляет элимент в конец вектора, если это необходимо, то меняет его размер\\
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {sort\_base.hpp}\\
+\hline
+const void Sort\_ch( NVector:: TVectorNBase:: TBase\_elem \&base,NVector:: TVectorNBase:: TBase\_elem \&newbase, int num)&Сортирует элименты по определённой букве в номере\\
+\hline
+void Sort\_int(const NVector:: TVectorNBase:: TBase\_elem \&base,NVector:: TVectorNBase:: TBase\_elem \&newbase)&Сортирует элименты по числу\\
+\hline
+void Sort(NVector:: TVectorNBase:: TBase\_elem \&base1)&	Вызывает сортировки в нужном порядке\\
+\hline
+\end{longtable}
+
+\pagebreak
+
+\section{Консоль}
+\begin{alltt}
+ pavel@pc ~/Projects/mai/2_course/DA/LB1/solution cat tests/test_1.t 
+A 159 PW	vnooqchksmimoghvylzenlpinabmekwqtgkrlrobqslxysucapzhyoeplbjtszge
+G 265 SA	xjcwlteiidgberucfaqegemae
+L 431 HA	vysiuauvmpgdyalgccevgaikpwjzkhhftblzhdkcqtszivdmhm
+L 759 JJ	kdcpzfqzhqlozuvnutrdlhsnfkiqpqbisafzeivoyfrkvgwunbqcyzpimsi
+O 072 VE	dduvzhnfhvdeymgfgu
+O 511 TC	gqsgphojrlkdz
+Q 902 LQ	omypycnyvcibio
+T 916 ZH	inezpvokworktbaobbdlbejhqjvipyqdbslecedrasduhllavkiknc
+U 482 CI	iregithcmyzujjqkjdpqqmfdzjaelsqdnhjqobutpojrl
+V 084 BM	fhoobacktutcvmbvbrcileqybzlczytlleucqnlnpbyiyblsf
+W 031 GY	wovxkbohipmgdlrabpvaeoznuxkvhitehlvsbgxafghe
+ pavel@pc ~/Projects/mai/2_course/DA/LB1/solution  g++ main.cpp -o main
+ pavel@pc ~/Projects/mai/2_course/DA/LB1/solution  cat tests/test_1.t | ./main 
+A 159 PW	vnooqchksmimoghvylzenlpinabmekwqtgkrlrobqslxysucapzhyoeplbjtszge
+G 265 SA	xjcwlteiidgberucfaqegemae
+L 431 HA	vysiuauvmpgdyalgccevgaikpwjzkhhftblzhdkcqtszivdmhm
+L 759 JJ	kdcpzfqzhqlozuvnutrdlhsnfkiqpqbisafzeivoyfrkvgwunbqcyzpimsi
+O 072 VE	dduvzhnfhvdeymgfgu
+O 511 TC	gqsgphojrlkdz
+Q 902 LQ	omypycnyvcibio
+T 916 ZH	inezpvokworktbaobbdlbejhqjvipyqdbslecedrasduhllavkiknc
+U 482 CI	iregithcmyzujjqkjdpqqmfdzjaelsqdnhjqobutpojrl
+V 084 BM	fhoobacktutcvmbvbrcileqybzlczytlleucqnlnpbyiyblsf
+W 031 GY	wovxkbohipmgdlrabpvaeoznuxkvhitehlvsbgxafghe
+\end{alltt}
+\pagebreak
+

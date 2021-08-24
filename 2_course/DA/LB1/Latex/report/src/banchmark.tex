@@ -1,0 +1,33 @@
+\section{Тест производительности}
+
+\begin{alltt}
+	[info] [2020-10-08 09:36:49] Running tests/test_0.t
+	Read time: 49us
+	Count of lines is 100
+	Counting sort time: 16us
+	STL stable sort time: 65us
+	[info] [2020-10-08 09:36:49] Running tests/test_1.t
+	Read time: 309us
+	Count of lines is 1000
+	Counting sort time: 186us
+	STL stable sort time: 375us
+	[info] [2020-10-08 09:36:49] Running tests/test_2.t
+	Read time: 3899us
+	Count of lines is 10000
+	Counting sort time: 1730us
+	STL stable sort time: 3812us
+	[info] [2020-10-08 09:36:49] Running tests/test_3.t
+	Read time: 30414us
+	Count of lines is 100000
+	Counting sort time: 20370us
+	STL stable sort time: 52669us
+	[info] [2020-10-08 09:36:50] Running tests/test_4.t
+	Read time: 268699us
+	Count of lines is 1000000
+	Counting sort time: 181746us
+	STL stable sort time: 612597us
+\end{alltt}
+
+Как видно, поразрядная сортировка быстрее стабильной сортировки слиянием из стандартной библиотеки. Это связанно с тем, что сортировка слиянием является сортировкой сравнения, то есть в лучшем случае ее сложность $O(N*lg(N))$. Поразрядная сортировка же работет за линейное время, поэтому быстрее. 
+\pagebreak
+

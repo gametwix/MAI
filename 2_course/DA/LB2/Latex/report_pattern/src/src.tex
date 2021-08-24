@@ -1,0 +1,290 @@
+\section{Описание}
+Как сказано в \cite{Kormen}: \enquote{Красно-черное дерево представляет собой бинарное дерево поиска с одним дополнительным битом цвета в каждом узле}. Цвет узла либо черный, либо красный. Такое дерево должно удовлетворять следующим свойствам:
+\begin{itemize}
+	\item Каждый узел является либо красным, либо черным.
+	\item Корень дерева является черным узлом.
+	\item Каждый лист дерева (Nil) является черным узлом.
+	\item Если узел красный, то оба его дочерних узла черные.
+\end{itemize}
+
+Вставка и удаление в дереве будет описана далее на примере исходного кода.
+\pagebreak
+
+\section{Исходный код}
+Данную программу можно разбить на несколько основных частей:
+\begin{itemize}
+	\item Парсинг введенной команды.
+	\item Вставка, удаление и поиск в дереве.
+	\item Сохранение в файл и загрузка дерева из файла.
+\end{itemize}
+
+Парсинг происходит в два этапа. Сначала мы считываем первое слово, из которого можно определить тип команды. Далее мы смотрим на первый символ этой строки и при помощи switch мы выбираем нужный вариан. Далее, по необходимости, мы считываем дополнительное слово или число. В случае вызова switch default, мы принимаем первое слово с командой как ключ для поиска.
+
+\begin{lstlisting}[language=C++]
+class TDict
+{
+	rb::rb_tree<NPair::TPair> Tree;
+	public:
+	void parse_comand(NString::TString &cmd)
+	{
+		NString::TString word;
+		NString::TString path;
+		NPair::TPair Data;
+		bool res;
+		switch(cmd[0])
+		{
+			case '+':
+			std::cin >> Data.Str >> Data.Num;
+			Data.Str.lower();
+
+			Tree.Search(Data,res);
+			if(res == false)
+			{
+				Tree.insert_data(Data);
+				std::cout << "OK" << std::endl;
+			}   
+			else
+				std::cout << "Exist" << std::endl;
+			break;
+			case '-':
+			std::cin >> Data.Str;
+			Data.Str.lower();
+			Tree.Search(Data,res);
+			if(res == true)
+			{
+				Tree.Delete(Data);
+				std::cout << "OK" << std::endl;
+			}   
+			else
+				std::cout << "NoSuchWord" << std::endl;
+			
+			break;
+			case '!':
+			std::cin >> word >> path;
+			word.lower();
+			if(word == "load")
+			{
+				if(Tree.load(path.str))
+					std::cout << "OK" <<std::endl;
+				else
+					std::cout << "ERROR: can't open file" <<std::endl;
+			}
+			else
+			{
+				if(Tree.save(path.str))
+					std::cout << "OK" <<std::endl;
+				else
+					std::cout << "ERROR: can't open file" <<std::endl;
+			}
+			break;
+			default:
+			Data.Str = cmd;
+			Data.Str.lower();
+			rb::rb_tree_elem<NPair::TPair> *elem = Tree.Search(Data,res);
+			
+			if(res)
+			{
+				std::cout<< "OK: " << elem->Key.Num << std::endl;
+			}
+			else
+				std::cout << "NoSuchWord" << std::endl;
+			break;
+		}
+	}
+
+};
+\end{lstlisting}
+
+Вставка в дерево это немного модифицированная вставка в обычное бинарное дерево поиска. Для того чтобы вставка сохраняла красно-черные свойства дерево используется фенкция ins\_fix(), которая перекрашивает узлы и выполняет повороты.
+
+\begin{lstlisting}[language=C++]
+void insert(rb_tree_elem<T> *z)
+{
+	rb_tree_elem<T> *y = Nil;
+	rb_tree_elem<T> *x = Root;
+	while(x != Nil)
+	{
+		y = x;
+		if(z->Key < x->Key)
+		{
+			x = x->Left;
+		}
+		else
+		{
+			x = x->Right;
+		}
+	}
+	z->Par = y;
+	if(y == Nil)
+	{
+		Root = z;
+	}
+	else if(z->Key < y->Key)
+	{
+		y->Left = z;
+	}
+	else
+	{
+		y->Right = z;
+	}
+	z->Left = Nil;
+	z->Right = Nil;
+	z->Color = 1;
+	
+	ins_fix(z);
+}
+\end{lstlisting}
+
+Исправление вставки можно разделить на 3 случая:
+\begin{itemize}
+	\item "Дядя" у узла z - красный. Так как z и z.p красный мы красим родителя z и y в черный, а для сохраннения колличества черных узлов мы красим z.p.p в красный, z.p.p становится новым узлом z.
+	\item "Дядя" у узла z черный, и z - правый потомок. В случае если мы правый потомок мы поднимаемся на уровень выше и делаем левый поворот. Далее делаем те же действия, что и в случае 3.
+	\item "Дядя" у узла z черный, и z - левый потомок.
+\end{itemize} 
+
+\newpage
+Определение функций:
+\begin{longtable}{|p{7.5cm}|p{7.5cm}|}
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {dict.hpp}\\
+\hline
+void parse\_comand(NString::TString \&cmd&Парсинг запросов\\
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {rb.hpp}\\
+\hline
+void left\_rotate(rb\_tree \&Tree,rb\_tree\_elem<T> *x)&Левый поворот дерева.\\
+\hline
+void right\_rotate(rb\_tree \&Tree,rb\_tree\_elem<T> *y)&Правый поворот дерева.\\
+\hline
+void ins\_fix(rb\_tree\_elem<T> *z)&Исправление вставки в дерево\\
+\hline
+void insert(rb\_tree\_elem<T> *z)&Вставка в дерево.\\
+\hline
+void transplant(rb\_tree\_elem<T> *u,rb\_tree\_elem<T> *v)&Переносит элимент в дереве.\\
+\hline
+void insert\_data(T data)&Создает элимент дерева для вызова вставки.\\
+\hline
+void print(rb\_tree\_elem<T> *Tree,int lvl)&Вывод дерева.\\
+\hline
+void clear(rb\_tree\_elem<T> *Tree)&Очистка дерева.\\
+\hline
+void save\_tree(rb\_tree\_elem<T> *Tree,std::ofstream\& wf)&Сохраняет дерево в файл.\\
+\hline
+bool save(char *ch)&Проверяет возможность создания и открывает файл на запись.\\
+\hline
+void load\_tree(rb\_tree\_elem<T> *Tree,std::ifstream\& rf)&Загрузка дерева из файла.\\
+\hline
+bool load(char *ch)&Проверяет наличие файла и возможность открыть его на чтение.\\
+\hline
+rb\_tree\_elem<T>* Search(T\& sample,bool\& success)&Поиск элемента в дереве.\\
+\hline
+rb\_tree\_elem<T>* Tree\_min(rb\_tree\_elem<T>* elem)&Поиск минимального элемента в дереве\\
+\hline
+void rb\_delete(rb\_tree\_elem<T>* \&elem)&Удаление элемента из дерева.\\
+\hline
+void delete\_fix(rb\_tree\_elem<T>* x)&Исправление дерева после удаления элемента.\\
+\hline
+void Delete(T\& sample)&Проверяет дерево на возможность удаления и вызывает удаление.\\
+\hline
+bool isFileEmpty(const char* filename)&Проверяет закончился ли файл.\\
+\hline
+\end{longtable}
+
+\newpage
+Листинг:
+\begin{lstlisting}[language=C]
+#pragma once
+#include <iostream>
+#include <stdio.h>
+#include <fstream>
+
+namespace rb
+{
+	template <typename T>
+	class rb_tree_elem
+	{
+		public:
+		bool Color;
+		T Key;
+		rb_tree_elem *Left;
+		rb_tree_elem *Right;
+		rb_tree_elem *Par;
+
+		rb_tree_elem()
+	};
+
+	template <typename T>
+	class rb_tree
+	{
+		public:
+		rb_tree_elem<T> *Root;
+		rb_tree_elem<T> *Nil;
+
+		rb_tree()
+
+		~rb_tree()
+
+		void left_rotate(rb_tree &Tree,rb_tree_elem<T> *x)
+
+		void right_rotate(rb_tree &Tree,rb_tree_elem<T> *y)
+
+		void ins_fix(rb_tree_elem<T> *z)
+
+		void insert(rb_tree_elem<T> *z)
+
+		void transplant(rb_tree_elem<T> *u,rb_tree_elem<T> *v)
+
+		void insert_data(T data)
+
+		void print(rb_tree_elem<T> *Tree,int lvl)
+
+		void clear(rb_tree_elem<T> *Tree)
+
+		void save_tree(rb_tree_elem<T> *Tree,std::ofstream& wf)
+
+		bool save(char *ch)
+
+		void load_tree(rb_tree_elem<T> *Tree,std::ifstream& rf)
+
+		bool load(char *ch)
+
+		rb_tree_elem<T>* Search(T& sample,bool& success)
+
+		rb_tree_elem<T>* Tree_min(rb_tree_elem<T>* elem)
+
+		void rb_delete(rb_tree_elem<T>* &elem)
+
+		void delete_fix(rb_tree_elem<T>* x)
+		
+		void Delete(T& sample)
+
+		bool isFileEmpty(const char* filename)
+	};
+
+}//namespace rb
+\end{lstlisting}
+\pagebreak
+
+\section{Консоль}
+\begin{alltt}
+	pavel@DESKTOP-VBSMFB3:~/Projects/mai/2_course/DA/LB2/tosol/solution$ cat test0
+	+ a 1
+	+ A 2
+	+ aa 18446744073709551615
+	aa
+	A
+	- A
+	a
+	pavel@DESKTOP-VBSMFB3:~/Projects/mai/2_course/DA/LB2/tosol/solution$ cat test0 |./solution
+	OK
+	Exist
+	OK
+	OK: 18446744073709551615
+	OK: 1
+	OK
+	NoSuchWord
+\end{alltt}
+\pagebreak
+
