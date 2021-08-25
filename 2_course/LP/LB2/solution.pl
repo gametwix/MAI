@@ -1,3 +1,6 @@
+% Place your solution here
+
+
 %Герман. 
 %Дима единственный из нас, кто любит историю. 
 %Олег и я увлекаемся одними и теми же предметами. 
@@ -66,5 +69,3 @@ intersect([_|T],Y,R) :- intersect(T,Y,R), !.
 threeelem([_|Tail],Tail):-length(Tail,3).
 
 elems([T1,T2,L1,L2],T1,T2,L1,L2).
-
-
