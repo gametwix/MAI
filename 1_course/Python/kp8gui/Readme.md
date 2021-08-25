@@ -5,4 +5,4 @@
 
 Пример работы:
 
-[Скриншот работы программы](https://github.com/gametwix/MAI/tree/master/1_course/Python/kp8gui/8_2.png)
+![Скриншот работы программы](https://github.com/gametwix/MAI/tree/master/1_course/Python/kp8gui/8_2.png)
