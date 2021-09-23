@@ -1,118 +1,159 @@
-#include "SuffTree.hpp"
+#include "SuffTree.h"
 #include <iostream>
 
-void TSuffTree::Init(std::string InpText){
-    Text = InpText + "$";
-    int SizeText = Text.size();
-    for(int i = 0;i < SizeText; ++i){
-        AddAllSuffix(i);
+TSuffTree::~TSuffTree(){
+    delete Root;
+}
+
+TSuffTree::TNode::~TNode(){
+    for(auto &i: Edges){
+        delete i.second;
+    }    
+}
+
+TSuffTree::TSuffTree(std::string &str){
+    Text = str + "$";
+
+    int size = Text.size();
+    Root = new TNode(-1,-1,-1);
+    CurNode = Root;
+    for(int i = 0; i < size; ++i){
+        Add(i);
     }
 }
 
-void TSuffTree::AddAllSuffix(int InpEnd){
-    std::shared_ptr<TNode> CurNode = Root;
-    std::shared_ptr<TNode> Next = nullptr;
-    std::shared_ptr<TNode> LastAdd = nullptr;
-    (*End)++;
-    int Length;
-    GoTo(CurNode, Length, ListNum,InpEnd - 1);
-    int CountSuf = ListNum;
-    for(int i = CountSuf; i <= InpEnd; ++i){
-        if(CreateNode(CurNode,LastAdd,Length,InpEnd)){
-            if(CurNode == Root){
-                Length--;
-            } else {
-                CurNode = CurNode->SuffixLink;
-            }
-        } else {
-            break;
+
+void TSuffTree::Add(int inpos){
+    LastAdd = nullptr;
+    ++CountSuff;
+    while(CountSuff){
+        //Если в узле, то выбираем ребро
+        if(Pos == 0){
+            CurEdge = inpos;
         }
-    }
-}
-
-void TSuffTree::GoTo(std::shared_ptr<TNode> &CurNode, int &Length, int Start, int Finish){
-    Length = Finish - Start + 1;
-    std::shared_ptr<TNode> Next = nullptr;
-    while(Length > 0){
-        if(Next != nullptr){
-            std::cout << Next->Length() << std::endl;
-            for(int i = Next->Start; i <= *(Next->End); ++i){
-                std::cout << Text[i];
+        //Проверяем существование ребра
+        if(CurNode->Edges.find(Text[CurEdge])==CurNode->Edges.end()){
+            //Если такового нет, то создаем новый лист и пробуем создать суфф ссылку
+            CreateList(inpos,CurNode);
+            CreateSufflink(CurNode);
+        } else { 
+            //Если посицие длиннее ребра, переходим дальше и все перепроверяем
+            if(EdgeFault()){
+                continue;
             }
-            std::cout << std::endl;
-            if(Next->Length() >= Length)
+            //Если символ существует, то переходим в него, создаем суфф ссылку и ничего больше не делаем
+            TNode *Edge = CurNode->Edges[Text[CurEdge]];
+            if(Text[Edge->Left+Pos] == Text[inpos]){
+                CreateSufflink(CurNode);
+                Pos++;
                 break;
-            CurNode = Next;
+            } else {
+                //Разрываем вершину, создаем новый лист, привязываем суфф сылку
+                BreakCreationNode(inpos);
+            }
         }
-        Next = CurNode->Children[Text[Start + CurNode->Length()]];
-        Start += CurNode->Length();
+        --CountSuff;
+        GoSuffLink();
     }
 }
 
-bool TSuffTree::CreateNode(std::shared_ptr<TNode> &Node, std::shared_ptr<TNode> &LastAdd,int Length, int AddNum){
-    std::shared_ptr<TNode> Next = nullptr;
-    if(Node->Children.find(Text[AddNum - Length]) != Node->Children.end()){
-        Next = Node->Children[Text[AddNum - Length]];
+void TSuffTree::CreateList(int inpos,TNode *Node){
+    CountLists++;
+    TNode *List = new TNode(inpos,Text.size() - 1,CountLists);
+    Node->Edges[Text[inpos]] = List;
+}
+
+void TSuffTree::CreateSufflink(TNode *Node){
+    if(LastAdd != nullptr){
+        LastAdd->SuffLink = Node;
+        LastAdd = nullptr;
     }
-    if(Next == nullptr){
-        std::shared_ptr<TNode> NewNode(new TNode(AddNum,End,ListNum + 1));
-        Node->Children.insert({Text[AddNum],NewNode});
-        ++ListNum;
-        if(LastAdd != nullptr){
-            LastAdd->SuffixLink = NewNode;
-        }
+}
+
+bool TSuffTree::EdgeFault(){
+    TNode *Edge = CurNode->Edges[Text[CurEdge]];
+    int lenedge = Edge->Right - Edge->Left + 1;
+    if(Pos >= lenedge){
+        CurEdge += lenedge;
+        Pos -= lenedge;
+        CurNode = Edge;
         return true;
+    }
+    return false;
+}
+
+void TSuffTree::BreakCreationNode(int inpos){
+    TNode *Edge = CurNode->Edges[Text[CurEdge]];
+    TNode *SplitNode = new TNode(Edge->Left,Edge->Left + Pos - 1,-1);
+    CurNode->Edges[Text[CurEdge]] = SplitNode;
+    Edge->Left += Pos;
+    SplitNode->Edges[Text[Edge->Left]] = Edge;
+    CreateList(inpos,SplitNode);
+    CreateSufflink(SplitNode);
+    LastAdd = SplitNode;
+}
+
+void TSuffTree::GoSuffLink(){
+    if(CurNode == Root){
+        if(Pos > 0){
+            --Pos;
+            ++CurEdge;
+        }
     } else {
-        if(Length == Next->Length()){
-            if(Next->Children.find(Text[AddNum]) == Next->Children.end()){
-                std::shared_ptr<TNode> NewNode(new TNode(AddNum,End,ListNum + 1));
-                Next->Children.insert({Text[AddNum],NewNode});
-                ++ListNum;
-                if(LastAdd != nullptr){
-                    LastAdd->SuffixLink = NewNode;
-                }
-                LastAdd = NewNode;
-                return true;
-            } else {
-                if(LastAdd != nullptr){
-                    LastAdd->SuffixLink = Next->Children[Text[AddNum]];
-                }
-                return false;
-            }
+        //По идее суфф линк должен быть всегда, но мало ли))
+        if(CurNode->SuffLink != nullptr){
+            CurNode = CurNode->SuffLink;
         } else {
-            if(Text[Next->Start + Length] == Text[AddNum]){
-                if(LastAdd != nullptr){
-                    LastAdd->SuffixLink = Next->Children[Text[AddNum]];
-                }
-                return false;
-            } else {
-                std::shared_ptr<TNode> NewNode(new TNode(Next->Start,Next->Start + Length - 1,-1));
-                Node->Children[Text[Next->Start]] = NewNode;
-                Next->Start += Next->Start + Length;
-                NewNode->Children.insert({Text[Next->Start],Next});
-                std::shared_ptr<TNode> List(new TNode(AddNum,End,ListNum + 1));
-                ListNum++;
-                NewNode->Children.insert({Text[AddNum],List});
-                if(LastAdd != nullptr){
-                    LastAdd->SuffixLink = NewNode;
-                }
-                LastAdd = NewNode;
-                return true;
-            }
+            CurNode = Root;
         }
     }
 }
 
-void TNode::Print(int level,std::string &text){
-    for(int i = 0;i < level;++i){
+
+
+void TSuffTree::Find(std::string &pattern, std::vector<int> &ans){
+    ans.clear();
+    int size = pattern.size();
+    TNode *Cur = Root;
+    for(int i = 0;i < size;){
+        //Если есть ребро начинающиеся с нужного символаж
+        if(Cur->Edges.find(pattern[i]) != Cur->Edges.end()){
+            //Переходим в нее и сверяем
+            Cur = Cur->Edges[pattern[i]];
+            for(int j = Cur->Left; j <= Cur->Right && i < size; ++i,++j){
+                if(Text[j] != pattern[i]){
+                    return;
+                }
+            }
+        } else { 
+            return;
+        }
+    }
+    Cur->ListsNums(ans);
+    std::sort(ans.begin(),ans.end());
+}
+
+
+void TSuffTree::TNode::ListsNums(std::vector<int> &ans){
+    if(NumList == -1){
+        for(auto &i:Edges){
+            i.second->ListsNums(ans);
+        }
+    } else {
+        ans.push_back(NumList);
+    }
+}
+
+void TSuffTree::TNode::Print(int level,std::string &text){
+    for(int i = 0; i < level; ++i){
         std::cout << "\t";
     }
-    for(int i = Start; i <= *End; ++i){
+    for(int i = Left; i<=Right;++i){
         std::cout << text[i];
     }
     std::cout << std::endl;
-    for(auto& child: Children){
-        child.second->Print(level + 1, text);
+    for(auto &i:Edges){
+        i.second->Print(level + 1,text);
     }
 }
 
