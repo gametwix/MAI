@@ -12,17 +12,11 @@ uint64_t Deikstra(int s, int f, std::vector<std::map<int,int>> &graph){
     visited.insert(s);
     visited_cost[s] = 0;
     while(!priority_queue.empty()){
-        //int node_cost = priority_queue.begin()->first;
         int node = priority_queue.begin()->second;
         priority_queue.erase(priority_queue.begin());
         if(node == f){
             break;
         }
-        //if(visited.count(node) >= 1){
-        //    if(node_cost > visited_cost[node]){
-        //        continue;
-        //    }
-        //}
         for(auto &i:graph[node]){
             if(visited.count(i.first) == 0 || visited_cost[node] + i.second < visited_cost[i.first]){
                 priority_queue.emplace(std::make_pair(visited_cost[node] + i.second,i.first));
@@ -36,8 +30,6 @@ uint64_t Deikstra(int s, int f, std::vector<std::map<int,int>> &graph){
     else
         return visited_cost[f];
 }
-
-
 
 int main(){
     int n,m,s,f;

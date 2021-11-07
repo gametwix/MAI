@@ -10,3 +10,4 @@ _minted-main
 *.fls
 *.fdb_latexmk
 *.out
+.vscode
