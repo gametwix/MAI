@@ -1,0 +1,46 @@
+\section{Исходный код}
+
+\begin{alltt}
+    void get_nurds_xy_4(float tt,std::vector<float> xlist,std::vector<float> ylist,std::vector<float> wlist,float &x,float &y)\{
+    std::vector<float> t(xlist.size() + 4,0);
+    for(int i = 0; i < xlist.size() - 4;++i)\{
+        t[4+i] = i+1;
+    \}
+    for(int i = 0; i < 4; ++i)\{
+        t[xlist.size() + i] = xlist.size() - 3;
+    \}
+    int d = 0;
+    for(int i = 0; i < t.size() - 1; ++i)\{
+        if(tt >= t[i] && tt < t[i+1])\{
+            d = i;
+            break;
+        \}
+    \}
+    std::vector<float> cx(4);
+    std::vector<float> cy(4);
+    std::vector<float> cw(4);
+    for(int i = 0; i < 4; ++i)\{
+        cx[i] = xlist[d-i]*wlist[d-i];
+        cy[i] = ylist[d-i]*wlist[d-i];
+        cw[i] = wlist[d-i];
+    \}
+    for(int r = 4; r > 1; --r)\{
+        int j = d;
+        for(int s = 0; s < r-1;++s)\{
+            float u_i = t[j];
+            float u_ir = t[j+r-1];
+            float omega = (tt - u_i)/(u_ir - u_i);
+            cx[s] = omega*cx[s] + (1 - omega)*cx[s+1];
+            cy[s] = omega*cy[s] + (1 - omega)*cy[s+1];
+            cw[s] = omega*cw[s] + (1 - omega)*cw[s+1];
+            j = j-1;
+        \}
+    \}
+    x = cx[0]/cw[0];
+    y = cy[0]/cw[0];
+\}
+\end{alltt}
+
+
+
+

@@ -1,0 +1,67 @@
+\section{Исходный код}
+
+\begin{lstlisting}[language=C]
+void get_object(std::vector<std::vector<float>> &points,std::vector<std::vector<int>> &faces,float a,float b,float h,int n, float A,float B,float D){
+    points.clear();
+    faces.clear();
+    float m = 0;
+    float t = 0;
+    for(int i = 0; i < n; ++i){
+        float x = a*b*glm::cos(t)/glm::sqrt(glm::pow(b,2)*glm::pow(cos(t),2) + glm::pow(a,2)*glm::pow(glm::sin(t),2));
+        float y = a*b*glm::sin(t)/glm::sqrt(glm::pow(b,2)*glm::pow(cos(t),2) + glm::pow(a,2)*glm::pow(glm::sin(t),2));
+        std::vector<float> point = {x,0.0f,y};
+        points.push_back(point);
+        if(A*x + B*y > m){
+            m = A*x + B*y;
+        }
+        t += 2*3.1415926f/ n;
+    }
+    D += m;
+    std::vector<int> top;
+    std::vector<int> cut;
+    std::vector<int> back(n);
+    for(int i = 0; i < n; ++i){
+        float x = a*b*glm::cos(t)/glm::sqrt(glm::pow(b,2)*glm::pow(cos(t),2) + glm::pow(a,2)*glm::pow(glm::sin(t),2));
+        float y = a*b*glm::sin(t)/glm::sqrt(glm::pow(b,2)*glm::pow(cos(t),2) + glm::pow(a,2)*glm::pow(glm::sin(t),2));
+        if(h <= D - A*x - B*y){
+            std::vector<float> point = {x,h,y};
+            points.push_back(point);
+            top.push_back(i + n);
+        }else{
+            std::vector<float> point = {x,D - A*x - B*y,y};
+            points.push_back(point);
+            cut.push_back(i + n);
+        }
+        t += 2*3.1415926f/ n;
+    }
+    for(int i = 0; i < n; ++i){
+        back[i] = n - i - 1;
+    }
+    faces.push_back(back);
+    for(int i = 0; i < n; ++i){
+        std::vector<int> face = {i,(i+1)%n,(i+1)%n + n,i + n};
+        faces.push_back(face);
+    }
+    if(top.size() >= 3){
+        faces.push_back(top);
+    }
+    if(cut.size() >= 3){
+        int s = cut.size();
+        for(int i = 0; i < s;++i){
+            int j = (i + 1) % cut.size();
+            if(glm::abs(cut[j] - cut[i]) > 1 && glm::abs(cut[j] - cut[i]) < n){
+                int first = (cut[i] + 1) % n + n;
+                int second = (cut[j] - 1) % n + n;
+                cut.insert(cut.begin() + i+1,first);
+                cut.insert(cut.begin() + i+2,second);
+            }
+        }
+        faces.push_back(cut);
+        
+    }
+}
+\end{lstlisting}
+
+
+
+

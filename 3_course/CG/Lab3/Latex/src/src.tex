@@ -1,0 +1,51 @@
+\section{Исходный код}
+
+\begin{lstlisting}[language=Python]
+def Gen_py(a,b,h,n,A,B,D):
+    points = list()
+    t = 0
+    m = 0
+    top = list()
+    cut = list()
+    for i in range(n):
+        x = a*b*np.cos(t)/(np.sqrt(b**2*np.cos(t)**2 + a**2*np.sin(t)**2))
+        y = a*b*np.sin(t)/(np.sqrt(b**2*np.cos(t)**2 + a**2*np.sin(t)**2))
+        points.append([x,y,0])
+        if(A*x + B*y > m):
+            m = A*x + B*y
+            t += 2*np.pi / n
+    D += m
+    for i in range(n):
+        x = a*b*np.cos(t)/(np.sqrt(b**2*np.cos(t)**2 + a**2*np.sin(t)**2))
+        y = a*b*np.sin(t)/(np.sqrt(b**2*np.cos(t)**2 + a**2*np.sin(t)**2))
+        if(h <= D - A*x - B*y):
+            points.append([x,y,h])
+            top.append(i + n)
+        else:
+            points.append([x,y,D - A*x - B*y])
+            cut.append(i + n)
+        t += 2*np.pi / n
+
+
+    faces = list()
+    faces.append(range(n)[::-1])
+    for i in range(n):
+        faces.append([i,(i+1)%n,(i+1)%n + n,i + n])
+    if(len(top) >= 3):
+        faces.append(top)
+    if(len(cut) >= 3):
+        for i in range(len(cut)):
+            j = (i + 1) % len(cut)
+            if(abs(cut[j] - cut[i]) > 1 and abs(cut[j] - cut[i]) < n):
+                a = (cut[i] + 1 ) % n + n
+                b = (cut[j] - 1 ) % n + n
+                cut.insert(i+1,a)
+                cut.insert(i+2,b)
+                cut = cut[-5:]+ cut[:-5]
+        faces.append(cut)
+    return objct.Object(points,faces)
+\end{lstlisting}
+
+
+
+
