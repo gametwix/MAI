@@ -1,0 +1,21 @@
+(defun knight-moves-first (k l m n)
+    (cond ((and (= (+ k 2) m) (= (+ l 1) n)) T)
+          ((and (= (+ k -2) m) (= (+ l 1) n)) T)
+          ((and (= (+ k 2) m) (= (+ l -1) n)) T)
+          ((and (= (+ k -2) m) (= (+ l -1) n)) T)
+          ((and (= (+ k 1) m) (= (+ l 2) n)) T)
+          ((and (= (+ k -1) m) (= (+ l 2) n)) T)
+          ((and (= (+ k 1) m) (= (+ l -2) n)) T)
+          ((and (= (+ k -1) m) (= (+ l -2) n)) T)))
+
+(defun knight-moves (k l m n)
+    (if (knight-moves-first k l m n) T
+        (cond ((knight-moves-first (+ k 2) (+ l 1) m n) (values (+ k 2) (+ l 1)))
+              ((knight-moves-first (- k 2) (+ l 1) m n) (values (- k 2) (+ l 1)))
+              ((knight-moves-first (+ k 2) (- l 1) m n) (values (+ k 2) (- l 1)))
+              ((knight-moves-first (- k 2) (- l 1) m n) (values (- k 2) (- l 1)))
+              ((knight-moves-first (+ k 1) (+ l 2) m n) (values (+ k 1) (+ l 2)))
+              ((knight-moves-first (- k 1) (+ l 2) m n) (values (- k 1) (+ l 2)))
+              ((knight-moves-first (+ k 1) (- l 2) m n) (values (+ k 1) (- l 2)))
+              ((knight-moves-first (- k 1) (- l 2) m n) (values (- k 1) (- l 2))))))
+
