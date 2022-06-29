@@ -208,5 +208,22 @@ xmin = golden__section__search(
 	return 0;
 }
 
+```
 
+## Semantic error detection example
+
+```
+Input gramma name>j22
+Gramma:j22.txt
+Source>er
+Source:er.ss
+   1|(display"a=\t\t")
+   2|a
+   3|
+   4|
+_________________
+Error[01-2] in line 2: Variable 'a' used, but not defined
+   4|
+     ^
+Rejected!
 ```
