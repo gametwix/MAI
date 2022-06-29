@@ -9,6 +9,7 @@
 #include "baselexer.cpp"
 #include "base-compiler.cpp"
 #include "semantics.cpp"
+#include "code-gen.cpp"
 using namespace std;
 
 int main()
@@ -27,11 +28,13 @@ int main()
             gramma_name<<endl;
 //____________________________________
   tSM sm(gramma_name.c_str());
+  tCG cg(gramma_name.c_str());
   tBC& bc=sm;
+  tBC& bc2=cg;
    if(print){
      outgr(cout, bc.getGramma());
      }
-  if(!bc){
+  if(!bc || !bc2){
     cout<<
       "Good bye!\n";
     cin.get();
@@ -60,7 +63,7 @@ int main()
     string source_name = string(name) + ".ss";
     ifstream tmp(source_name.c_str());
     if(!tmp) break;
-// строка ввода похожа на имя файла
+// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     file = true;
     bc.PARSER_DEBUG = false;
    }while(false);
@@ -76,7 +79,7 @@ int main()
 
    cout << "Source:"<<
             source_name<<endl;
-  {// начало блока распечатки файла
+  {// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     ifstream fsource(source_name.c_str());
     int linecount=0;
     while(fsource){
@@ -86,17 +89,25 @@ int main()
                               buf<<endl;
      }//while(fsource)...
      cout<<"_________________\n";
-   }// конец блока
+   }// пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 
    int res = bc.rewrite(source_name.c_str());
+   int res2 = bc2.rewrite(source_name.c_str());
        cout<< bc.getMessage();
 //       cout<< bc.getMessage()<<endl;
-   if(res==0){
-      cout <<"Accepted";
+   if(res==0 && res2 == 0){
+      cout <<"Accepted!\n";
+      cout <<"Code:\n"<<
+                       bc2.getObject()<< endl;
+     string obj_name = source + ".cpp";
+     ofstream tmp(obj_name.c_str());
+     tmp << bc2.getObject() << endl;
+     if(tmp)
+        cout << "Code is saved to file " << obj_name <<
+                " ! "<<endl;
     }
     else 
-      cout <<"Rejected";
-   cout << " !\n";
+      cout <<"Rejected!\n";
    cout<<"_________________________\n";
  } while(true);
  return 0;
